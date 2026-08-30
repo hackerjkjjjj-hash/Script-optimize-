@@ -1,6 +1,4 @@
--- Jerry Optimize 🔧 v4.1 (Pro Max + Anti-Cheat Safe Fly + Avatar List)
--- Performance Optimizer & Player Tracker
-
+-- Jerry Hub v7.0 (Fast Mode + Safe Slow Fly + Anti-Cheat Protection)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
@@ -11,275 +9,391 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 
--- Fix for Executors like Delta, Fluxus
+-- Safe GUI Parent for Executors
 local guiParent
-if gethui then
-    guiParent = gethui()
+local success, res = pcall(function() return gethui() end)
+if success and res then
+    guiParent = res
 else
-    local success, _ = pcall(function() guiParent = game:GetService("CoreGui") end)
-    if not success or not guiParent then
-        guiParent = player:WaitForChild("PlayerGui")
-    end
+    guiParent = CoreGui
 end
 
 pcall(function()
-    local old = guiParent:FindFirstChild("JerryOptimize")
-    if old then old:Destroy() end
+    if guiParent:FindFirstChild("JerryHubComplete") then
+        guiParent.JerryHubComplete:Destroy()
+    end
+    if player.PlayerGui:FindFirstChild("JerryHubComplete") then
+        player.PlayerGui.JerryHubComplete:Destroy()
+    end
 end)
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "JerryOptimize"
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = guiParent
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "JerryHubComplete"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- State
-local optimizeOn = false
-local boostOn = false
-local isFlying = false
+local parentSuccess = pcall(function()
+    screenGui.Parent = guiParent
+end)
+if not parentSuccess then
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+end
 
--- Original settings
+-- States
+local optimizeActive = false
+local boostActive = false
+local fastModeActive = false
+local boostConnections = {}
+local activeTween = nil
+
+-- Backup original settings
 local originalShadows = Lighting.GlobalShadows
+local originalTech = Lighting.Technology
 local terrain = Workspace:FindFirstChildOfClass("Terrain")
 local originalDecoration = false
 if terrain then pcall(function() originalDecoration = terrain.Decoration end) end
 
 local effects = {}
-for _,v in ipairs(Lighting:GetChildren()) do
+for _, v in ipairs(Lighting:GetChildren()) do
     if v:IsA("PostEffect") then effects[v] = v.Enabled end
 end
 
--- Open button (Icon 🔧)
-local open = Instance.new("TextButton")
-open.Size = UDim2.fromOffset(50, 50)
-open.Position = UDim2.new(0, 15, 0.5, -25)
-open.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-open.Text = "🔧"
-open.TextSize = 25
-open.Font = Enum.Font.GothamBold
-open.TextColor3 = Color3.new(1, 1, 1)
-open.AutoButtonColor = true
-open.Parent = gui
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(1, 0)
-openCorner.Parent = open
-
--- Main menu
-local menu = Instance.new("Frame")
-menu.Size = UDim2.fromOffset(360, 360) 
-menu.Position = UDim2.new(0.5, -180, 0.5, -180)
-menu.BackgroundColor3 = Color3.fromRGB(15, 20, 25)
-menu.BorderSizePixel = 0
-menu.Visible = false 
-menu.Parent = gui
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
-corner.Parent = menu
-
--- Header
-local header = Instance.new("TextLabel")
-header.Size = UDim2.new(1, -20, 0, 48)
-header.Position = UDim2.fromOffset(10, 5)
-header.BackgroundTransparency = 1
-header.Text = "Jerry Optimize 🔧 v4.1"
-header.TextColor3 = Color3.fromRGB(255, 215, 0)
-header.TextSize = 22
-header.Font = Enum.Font.GothamBold
-header.Parent = menu
-
--- Status
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -30, 0, 25)
-status.Position = UDim2.fromOffset(15, 52)
-status.BackgroundTransparency = 1
-status.Text = "Status: Ready"
-status.TextColor3 = Color3.fromRGB(150, 255, 150)
-status.TextSize = 14
-status.Font = Enum.Font.Gotham
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.Parent = menu
-
--- FPS
-local fpsLabel = Instance.new("TextLabel")
-fpsLabel.Size = UDim2.new(1, -30, 0, 25)
-fpsLabel.Position = UDim2.fromOffset(15, 76)
-fpsLabel.BackgroundTransparency = 1
-fpsLabel.Text = "FPS: --"
-fpsLabel.TextColor3 = Color3.new(1, 1, 1)
-fpsLabel.TextSize = 14
-fpsLabel.Font = Enum.Font.GothamSemibold
-fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-fpsLabel.Parent = menu
-
-local function makeButton(text, y, parent)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -40, 0, 50)
-    b.Position = UDim2.fromOffset(20, y)
-    b.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = Color3.new(1, 1, 1)
-    b.TextSize = 16
-    b.Font = Enum.Font.GothamSemibold
-    b.Parent = parent or menu
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 10)
-    c.Parent = b
-    return b
+--=========================================
+-- 1. NORMAL OPTIMIZE
+--=========================================
+local function applyOptimize(state)
+    optimizeActive = state
+    if state then
+        pcall(function() Lighting.GlobalShadows = false end)
+        pcall(function() Lighting.Technology = Enum.LightingTechnology.Compatibility end)
+        if terrain then pcall(function() terrain.Decoration = false end) end
+        for effect, _ in pairs(effects) do
+            pcall(function() if effect.Parent then effect.Enabled = false end end)
+        end
+    else
+        pcall(function() Lighting.GlobalShadows = originalShadows end)
+        pcall(function() Lighting.Technology = originalTech end)
+        if terrain then pcall(function() terrain.Decoration = originalDecoration end) end
+        for effect, enabled in pairs(effects) do
+            pcall(function() if effect.Parent then effect.Enabled = enabled end end)
+        end
+    end
 end
 
-local optimizeButton = makeButton("Normal Optimize  [OFF]", 105)
-local boostButton = makeButton("MAX FPS BOOST  [OFF]", 165)
-boostButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-local tpMenuButton = makeButton("🎯 Open Player List", 225)
-local stopFlyButton = makeButton("🛑 Stop Flying", 285)
-stopFlyButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-stopFlyButton.Visible = false
+--=========================================
+-- 2. CLEAR FPS BOOST (Keep Textures Clear)
+--=========================================
+local function optimizeObject(v)
+    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+        pcall(function() v.Enabled = false end)
+    elseif v:IsA("BasePart") then
+        pcall(function() v.CastShadow = false end)
+    end
+end
+
+local function applyBoost(state)
+    boostActive = state
+    if state then
+        if terrain then
+            pcall(function()
+                terrain.WaterWaveSize = 0
+                terrain.WaterTransparency = 0.5
+            end)
+        end
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            optimizeObject(v)
+        end
+        local conn = Workspace.DescendantAdded:Connect(function(v)
+            if boostActive then optimizeObject(v) end
+        end)
+        table.insert(boostConnections, conn)
+    else
+        for _, conn in ipairs(boostConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        boostConnections = {}
+        if terrain then
+            pcall(function()
+                terrain.WaterWaveSize = 0.5
+                terrain.WaterTransparency = 0.6
+            end)
+        end
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                pcall(function() v.Enabled = true end)
+            elseif v:IsA("BasePart") then
+                pcall(function() v.CastShadow = true end)
+            end
+        end
+    end
+end
 
 --=========================================
--- Player List Menu ជាមួយ Avatar
+-- 3. FAST MODE (Max Performance / Low Quality)
 --=========================================
-local tpFrame = Instance.new("Frame")
-tpFrame.Size = UDim2.fromOffset(360, 360)
-tpFrame.Position = UDim2.new(1, 10, 0, 0)
-tpFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 25)
-tpFrame.BorderSizePixel = 0
-tpFrame.Visible = false
-tpFrame.Parent = menu
-local tpCorner = Instance.new("UICorner")
-tpCorner.CornerRadius = UDim.new(0, 16)
-tpCorner.Parent = tpFrame
+local function applyFastMode(state)
+    fastModeActive = state
+    if state then
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("Decal") or v:IsA("Texture") then
+                pcall(function() v.Transparency = 1 end)
+            end
+        end
+    else
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+        end)
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("Decal") or v:IsA("Texture") then
+                pcall(function() v.Transparency = 0 end)
+            end
+        end
+    end
+end
 
-local tpHeader = Instance.new("TextLabel")
-tpHeader.Size = UDim2.new(1, -20, 0, 48)
-tpHeader.Position = UDim2.fromOffset(10, 5)
-tpHeader.BackgroundTransparency = 1
-tpHeader.Text = "👥 Select a Player"
-tpHeader.TextColor3 = Color3.fromRGB(100, 200, 255)
-tpHeader.TextSize = 20
-tpHeader.Font = Enum.Font.GothamBold
-tpHeader.Parent = tpFrame
+--=========================================
+-- FLOATING OPEN BUTTON (Wrench)
+--=========================================
+local openBtn = Instance.new("TextButton")
+openBtn.Size = UDim2.new(0, 48, 0, 48)
+openBtn.Position = UDim2.new(0, 20, 0.4, 0)
+openBtn.BackgroundColor3 = Color3.fromRGB(20, 18, 30)
+openBtn.Text = "🔧"
+openBtn.TextSize = 22
+openBtn.Parent = screenGui
 
-local refreshBtn = Instance.new("TextButton")
-refreshBtn.Size = UDim2.fromOffset(80, 30)
-refreshBtn.Position = UDim2.new(1, -95, 0, 15)
-refreshBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
-refreshBtn.Text = "Refresh"
-refreshBtn.TextColor3 = Color3.new(1,1,1)
-refreshBtn.Font = Enum.Font.GothamBold
-refreshBtn.Parent = tpFrame
-local refCorner = Instance.new("UICorner")
-refCorner.CornerRadius = UDim.new(0, 6)
-refCorner.Parent = refreshBtn
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = Color3.fromRGB(147, 51, 234)
+openStroke.Thickness = 2
+openStroke.Parent = openBtn
 
-local scrollList = Instance.new("ScrollingFrame")
-scrollList.Size = UDim2.new(1, -20, 1, -65)
-scrollList.Position = UDim2.fromOffset(10, 55)
-scrollList.BackgroundTransparency = 1
-scrollList.ScrollBarThickness = 6
-scrollList.Parent = tpFrame
-local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 5)
-listLayout.Parent = scrollList
+--=========================================
+-- MAIN MENU (Compact & Draggable)
+--=========================================
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 460, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 13, 22)
+mainFrame.Visible = false
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
 
-tpMenuButton.MouseButton1Click:Connect(function()
-    tpFrame.Visible = not tpFrame.Visible
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(110, 40, 190)
+mainStroke.Thickness = 1.5
+mainStroke.Parent = mainFrame
+
+-- Top Bar
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 42)
+topBar.BackgroundTransparency = 1
+topBar.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 1, 0)
+title.Position = UDim2.new(0, 15, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Jerry Hub 🔧 • Fast Mode & Safe Fly"
+title.TextColor3 = Color3.fromRGB(220, 180, 255)
+title.TextSize = 14
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = topBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -36, 0, 7)
+closeBtn.BackgroundColor3 = Color3.fromRGB(30, 25, 45)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 12
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = topBar
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
 end)
 
 --=========================================
--- Fix មុខងារ Fly Bypass លោតមកកន្លែងដើមវិញ
+-- SIDEBAR TABS
 --=========================================
-local flyTween, noclipLoop
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0, 120, 1, -55)
+sidebar.Position = UDim2.new(0, 12, 0, 45)
+sidebar.BackgroundTransparency = 1
+sidebar.Parent = mainFrame
 
-local function stopFlying()
-    if flyTween then
-        flyTween:Cancel()
-        flyTween = nil
-    end
-    if noclipLoop then
-        noclipLoop:Disconnect()
-        noclipLoop = nil
-    end
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.Padding = UDim.new(0, 6)
+tabLayout.Parent = sidebar
+
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -145, 1, -55)
+contentContainer.Position = UDim2.new(0, 138, 0, 45)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
+
+local mainPage = Instance.new("ScrollingFrame")
+mainPage.Size = UDim2.new(1, 0, 1, 0)
+mainPage.BackgroundTransparency = 1
+mainPage.ScrollBarThickness = 3
+mainPage.Visible = true
+mainPage.Parent = contentContainer
+Instance.new("UIListLayout", mainPage).Padding = UDim.new(0, 8)
+mainPage.CanvasSize = UDim2.new(0, 0, 0, 200)
+
+local playerPage = Instance.new("ScrollingFrame")
+playerPage.Size = UDim2.new(1, 0, 1, 0)
+playerPage.BackgroundTransparency = 1
+playerPage.ScrollBarThickness = 3
+playerPage.Visible = false
+playerPage.Parent = contentContainer
+Instance.new("UIListLayout", playerPage).Padding = UDim.new(0, 6)
+
+local function createTabBtn(name, icon, targetPage)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = (targetPage == mainPage) and Color3.fromRGB(126, 34, 206) or Color3.fromRGB(22, 18, 32)
+    btn.Text = "  " .. icon .. "  " .. name
+    btn.TextColor3 = (targetPage == mainPage) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 160, 200)
+    btn.TextSize, btn.Font = 12, Enum.Font.GothamSemibold
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Parent = sidebar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        -- លុប BodyVelocity ចោលដើម្បីឲ្យធ្លាក់វិញធម្មតា
-        local bv = hrp:FindFirstChild("JerryFlyBV")
-        if bv then bv:Destroy() end
-        hrp.Anchored = false 
-    end
-    
-    isFlying = false
-    stopFlyButton.Visible = false
-    status.Text = "Status: Flight Stopped."
+    btn.MouseButton1Click:Connect(function()
+        mainPage.Visible = (targetPage == mainPage)
+        playerPage.Visible = (targetPage == playerPage)
+        for _, child in pairs(sidebar:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+                child.TextColor3 = Color3.fromRGB(170, 160, 200)
+            end
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(126, 34, 206)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end)
 end
 
-local function flyToTarget(targetName)
-    local targetPlr = Players:FindFirstChild(targetName)
-    if not targetPlr or not targetPlr.Character or not targetPlr.Character:FindFirstChild("HumanoidRootPart") then 
-        status.Text = "Status: Player not found or dead!"
-        return 
-    end
+createTabBtn("Main", "🏠", mainPage)
+createTabBtn("Players", "👤", playerPage)
+
+--=========================================
+-- POPULATE MAIN PAGE
+--=========================================
+local function createToggleCard(titleText, descText, callback)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -4, 0, 56)
+    card.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+    card.Parent = mainPage
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+    
+    local tL = Instance.new("TextLabel")
+    tL.Size = UDim2.new(1, -60, 0, 18)
+    tL.Position = UDim2.new(0, 12, 0, 9)
+    tL.BackgroundTransparency = 1
+    tL.Text = titleText
+    tL.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tL.TextSize = 13
+    tL.Font = Enum.Font.GothamBold
+    tL.TextXAlignment = Enum.TextXAlignment.Left
+    tL.Parent = card
+    
+    local dL = Instance.new("TextLabel")
+    dL.Size = UDim2.new(1, -60, 0, 20)
+    dL.Position = UDim2.new(0, 12, 0, 27)
+    dL.BackgroundTransparency = 1
+    dL.Text = descText
+    dL.TextColor3 = Color3.fromRGB(140, 130, 170)
+    dL.TextSize = 10
+    dL.Font = Enum.Font.Gotham
+    dL.TextXAlignment = Enum.TextXAlignment.Left
+    dL.Parent = card
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 42, 0, 22)
+    toggleBtn.Position = UDim2.new(1, -50, 0.5, -11)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 40, 60)
+    toggleBtn.Text = ""
+    toggleBtn.Parent = card
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+    
+    local circle = Instance.new("Frame")
+    circle.Size = UDim2.new(0, 16, 0, 16)
+    circle.Position = UDim2.new(0, 3, 0.5, -8)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    circle.Parent = toggleBtn
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    
+    local isOn = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        local goalPos = isOn and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        local goalColor = isOn and Color3.fromRGB(126, 34, 206) or Color3.fromRGB(45, 40, 60)
+        
+        TweenService:Create(circle, TweenInfo.new(0.2), {Position = goalPos}):Play()
+        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = goalColor}):Play()
+        
+        callback(isOn)
+    end)
+end
+
+createToggleCard("Normal Optimize", "Disables shadows, lighting effects & terrain decoration.", function(state)
+    applyOptimize(state)
+end)
+
+createToggleCard("Clear FPS Boost", "Removes laggy particles & trails safely.", function(state)
+    applyBoost(state)
+end)
+
+createToggleCard("Fast Mode (Max Speed)", "Lowers graphics & quality for maximum FPS.", function(state)
+    applyFastMode(state)
+end)
+
+--=========================================
+-- POPULATE PLAYER PAGE (Safe Slow Fly)
+--=========================================
+local pHeader = Instance.new("TextLabel")
+pHeader.Size = UDim2.new(1, 0, 0, 20)
+pHeader.BackgroundTransparency = 1
+pHeader.Text = "👥 Click Player to Safe Smooth Fly:"
+pHeader.TextColor3 = Color3.fromRGB(200, 160, 255)
+pHeader.TextSize, pHeader.Font = 11, Enum.Font.GothamBold
+pHeader.TextXAlignment = Enum.TextXAlignment.Left
+pHeader.Parent = playerPage
+
+-- កែសម្រួលល្បឿនឱ្យយឺតជាងមុន និងមានសុវត្ថិភាពការពារ Anti-Cheat ចាប់
+local function safeFlyTo(targetPlr)
+    if not targetPlr or not targetPlr.Character or not targetPlr.Character:FindFirstChild("HumanoidRootPart") then return end
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
 
     local hrp = player.Character.HumanoidRootPart
     local targetHrp = targetPlr.Character.HumanoidRootPart
 
+    if activeTween then activeTween:Cancel() end
+
     local distance = (hrp.Position - targetHrp.Position).Magnitude
-    -- ល្បឿនសុវត្ថិភាព (Studs ក្នុង ១ វិនាទី) បើមើលទៅនៅតែឆក់មកក្រោយ ឲ្យបន្ថយល្បឿននេះមកត្រឹម 80 វិញ
-    local speed = 150 
-    local flyTime = distance / speed
-    if flyTime < 0.5 then flyTime = 0.5 end 
+    -- កែតម្រូវល្បឿន: ចែកនឹង 25 (ធ្វើឱ្យហោះយឺត និងរលូនជាងមុន មិនលឿនពេកធار Anti-Cheat ចាប់)
+    local travelTime = math.clamp(distance / 25, 2, 10) 
 
-    -- ប្រើ BodyVelocity ជំនួស Anchored = true ដើម្បីការពារការ Teleport មកកន្លែងដើម
-    local bv = hrp:FindFirstChild("JerryFlyBV")
-    if not bv then
-        bv = Instance.new("BodyVelocity")
-        bv.Name = "JerryFlyBV"
-        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        bv.Velocity = Vector3.zero
-        bv.Parent = hrp
-    end
-    hrp.Anchored = false -- ធានាថាវាមិនជាប់ Anchor
-
-    local tweenInfo = TweenInfo.new(flyTime, Enum.EasingStyle.Linear)
-    local targetGoal = targetHrp.CFrame * CFrame.new(0, 0, 3) 
-    flyTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetGoal})
-
-    isFlying = true
-    stopFlyButton.Visible = true
-    
-    noclipLoop = RunService.Stepped:Connect(function()
-        if player.Character then
-            for _, v in pairs(player.Character:GetDescendants()) do
-                if v:IsA("BasePart") and v.CanCollide then
-                    v.CanCollide = false
-                end
-            end
-        end
-    end)
-
-    status.Text = "Status: Flying to " .. targetName .. "..."
-    flyTween:Play()
-
-    flyTween.Completed:Connect(function(playbackState)
-        if playbackState == Enum.PlaybackState.Completed then
-            stopFlying()
-            status.Text = "Status: Arrived at " .. targetName
-        end
-    end)
+    activeTween = TweenService:Create(hrp, TweenInfo.new(travelTime, Enum.EasingStyle.Sine), {
+        CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
+    })
+    activeTween:Play()
 end
 
-stopFlyButton.MouseButton1Click:Connect(stopFlying)
-
---=========================================
--- មុខងារ Scan អ្នកលេងចូលក្នុងបញ្ជី + ទាញយករូប Avatar
---=========================================
-local function loadPlayers()
-    for _, child in pairs(scrollList:GetChildren()) do
+local function loadPlayerList()
+    for _, child in pairs(playerPage:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     
@@ -288,153 +402,84 @@ local function loadPlayers()
         if p ~= player then
             count += 1
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -10, 0, 42)
-            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            -- ដាក់ Space ពីមុខឲ្យធំដើម្បីទុកកន្លែងឲ្យរូប Avatar
-            btn.Text = "            " .. p.Name .. " (@" .. p.DisplayName .. ")"
-            btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = Enum.Font.GothamSemibold
-            btn.TextSize = 13
+            btn.Size = UDim2.new(1, -4, 0, 36)
+            btn.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+            btn.Text = "        " .. p.Name
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextSize, btn.Font = 11, Enum.Font.GothamSemibold
             btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.Parent = scrollList
+            btn.Parent = playerPage
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 8)
-            btnCorner.Parent = btn
-
-            -- បង្កើតកន្លែងដាក់រូប Avatar 
             local avatar = Instance.new("ImageLabel")
-            avatar.Size = UDim2.fromOffset(32, 32)
-            avatar.Position = UDim2.new(0, 5, 0.5, -16)
-            avatar.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+            avatar.Size = UDim2.new(0, 26, 0, 26)
+            avatar.Position = UDim2.new(0, 5, 0.5, -13)
+            avatar.BackgroundColor3 = Color3.fromRGB(15, 13, 22)
             avatar.Parent = btn
+            Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
             
-            local avatarCorner = Instance.new("UICorner")
-            avatarCorner.CornerRadius = UDim.new(1, 0)
-            avatarCorner.Parent = avatar
-            
-            -- ទាញយករូបពី Roblox ប្រើ task.spawn ដើម្បីកុំឲ្យគាំង Menu
             task.spawn(function()
                 local success, img = pcall(function()
                     return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
                 end)
-                if success and img then
-                    avatar.Image = img
-                end
+                if success and img then avatar.Image = img end
             end)
 
             btn.MouseButton1Click:Connect(function()
-                if not isFlying then
-                    flyToTarget(p.Name)
-                end
+                safeFlyTo(p)
             end)
         end
     end
-    scrollList.CanvasSize = UDim2.new(0, 0, 0, count * 47)
+    playerPage.CanvasSize = UDim2.new(0, 0, 0, count * 40)
 end
 
-refreshBtn.MouseButton1Click:Connect(loadPlayers)
-loadPlayers()
+loadPlayerList()
+Players.PlayerAdded:Connect(loadPlayerList)
+Players.PlayerRemoving:Connect(loadPlayerList)
 
 --=========================================
--- មុខងារ Optimize ដដែល
+-- DRAGGING LOGIC
 --=========================================
-local function applyOptimize()
-    pcall(function() Lighting.GlobalShadows = false end)
-    pcall(function() if terrain then terrain.Decoration = false end end)
-    for effect, _ in pairs(effects) do
-        pcall(function() if effect.Parent then effect.Enabled = false end end)
-    end
-end
-local function restoreOptimize()
-    pcall(function() Lighting.GlobalShadows = originalShadows end)
-    pcall(function() if terrain then terrain.Decoration = originalDecoration end end)
-    for effect, enabled in pairs(effects) do
-        pcall(function() if effect.Parent then effect.Enabled = enabled end end)
-    end
-end
-
-optimizeButton.MouseButton1Click:Connect(function()
-    optimizeOn = not optimizeOn
-    if optimizeOn then
-        applyOptimize()
-        optimizeButton.Text = "Normal Optimize  [ON]"
-        optimizeButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        status.Text = "Status: Optimized"
-    else
-        restoreOptimize()
-        optimizeButton.Text = "Normal Optimize  [OFF]"
-        optimizeButton.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
-        status.Text = "Status: Ready"
-    end
-end)
-
-boostButton.MouseButton1Click:Connect(function()
-    if not boostOn then
-        boostOn = true
-        boostButton.Text = "MAX FPS BOOST  [ON]"
-        boostButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        status.Text = "Status: Applying MAX Boost..."
-        task.wait(0.1)
-        pcall(function()
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-            Lighting.GlobalShadows = false Lighting.FogEnd = 9e9
-            Lighting.Brightness = 1 Lighting.EnvironmentDiffuseScale = 0
-            Lighting.EnvironmentSpecularScale = 0
-        end)
-        task.spawn(function()
-            local c = 0
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                c += 1 if c % 1000 == 0 then task.wait() end
-                if obj:IsA("BasePart") then obj.Material = Enum.Material.SmoothPlastic obj.Reflectance = 0 obj.CastShadow = false
-                elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or obj:IsA("Fire") or obj:IsA("Smoke") then
-                    pcall(function() obj.Transparency = 1 end) pcall(function() obj.Enabled = false end)
-                end
-            end
-            status.Text = "Status: MAX FPS BOOST ACTIVE!"
-        end)
-    else
-        status.Text = "Status: Rejoin to disable MAX Boost!"
-        task.wait(2) status.Text = "Status: MAX FPS BOOST ACTIVE!"
-    end
-end)
-
--- FPS Counter
-local frames, lastTime = 0, os.clock()
-RunService.RenderStepped:Connect(function()
-    frames += 1 local now = os.clock()
-    if now - lastTime >= 1 then
-        fpsLabel.Text = "FPS: " .. frames
-        frames = 0 lastTime = now
-    end
-end)
-
--- Dragging Logic
 local function makeDraggable(guiItem, dragHandle)
-    local drag, start, pos, dragged
+    local dragging, dragStart, startPos
+    local hasDragged = false
+
     dragHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            drag, dragged = true, false start, pos = input.Position, guiItem.Position
+            dragging = true
+            hasDragged = false
+            dragStart = input.Position
+            startPos = guiItem.Position
         end
     end)
+
     UIS.InputChanged:Connect(function(input)
-        if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - start
-            if delta.Magnitude > 5 then dragged = true guiItem.Position = UDim2.new(pos.X.Scale, pos.X.Offset + delta.X, pos.Y.Scale, pos.Y.Offset + delta.Y) end
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 3 then hasDragged = true end
+            guiItem.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
         end
     end)
+    
     dragHandle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then drag = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
     end)
-    return function() return dragged end
+
+    return function() return hasDragged end
 end
 
-local isBtnDragged = makeDraggable(open, open)
-open.MouseButton1Click:Connect(function() if not isBtnDragged() then menu.Visible = not menu.Visible end end)
-makeDraggable(menu, header)
-
-UIS.InputBegan:Connect(function(input, p)
-    if not p and input.KeyCode == Enum.KeyCode.K then menu.Visible = not menu.Visible end
+local wasDragged = makeDraggable(openBtn, openBtn)
+openBtn.MouseButton1Click:Connect(function()
+    if not wasDragged() then
+        mainFrame.Visible = not mainFrame.Visible
+    end
 end)
 
-print("Jerry Optimize 🔧 v4.1 (Fixed Fly + Avatar) Loaded!")
+makeDraggable(mainFrame, topBar)
+
+print("Jerry Hub v7.0 Loaded Successfully (Fast Mode Added & Safe Slow Fly)!")
