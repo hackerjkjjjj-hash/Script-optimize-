@@ -1,4 +1,4 @@
--- Jerry Optimize 🔧 v4.0 (Pro Max + Anti-Cheat Safe Fly)
+-- Jerry Optimize 🔧 v4.1 (Pro Max + Anti-Cheat Safe Fly + Avatar List)
 -- Performance Optimizer & Player Tracker
 
 if not game:IsLoaded() then
@@ -19,7 +19,7 @@ local guiParent
 if gethui then
     guiParent = gethui()
 else
-    local success = pcall(function() guiParent = game:GetService("CoreGui") end)
+    local success, _ = pcall(function() guiParent = game:GetService("CoreGui") end)
     if not success or not guiParent then
         guiParent = player:WaitForChild("PlayerGui")
     end
@@ -67,7 +67,7 @@ local openCorner = Instance.new("UICorner")
 openCorner.CornerRadius = UDim.new(1, 0)
 openCorner.Parent = open
 
--- Main menu (ពង្រីកទំហំដើម្បីដាក់ Button ថ្មី)
+-- Main menu
 local menu = Instance.new("Frame")
 menu.Size = UDim2.fromOffset(360, 360) 
 menu.Position = UDim2.new(0.5, -180, 0.5, -180)
@@ -84,7 +84,7 @@ local header = Instance.new("TextLabel")
 header.Size = UDim2.new(1, -20, 0, 48)
 header.Position = UDim2.fromOffset(10, 5)
 header.BackgroundTransparency = 1
-header.Text = "Jerry Optimize 🔧 v4.0"
+header.Text = "Jerry Optimize 🔧 v4.1"
 header.TextColor3 = Color3.fromRGB(255, 215, 0)
 header.TextSize = 22
 header.Font = Enum.Font.GothamBold
@@ -137,14 +137,14 @@ boostButton.TextColor3 = Color3.fromRGB(255, 100, 100)
 local tpMenuButton = makeButton("🎯 Open Player List", 225)
 local stopFlyButton = makeButton("🛑 Stop Flying", 285)
 stopFlyButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-stopFlyButton.Visible = false -- លាក់សិន ឃើញតែពេលកំពុងហោះ
+stopFlyButton.Visible = false
 
 --=========================================
--- ផ្ទាំងថ្មី សម្រាប់បញ្ជីអ្នកលេង (Player List Menu)
+-- Player List Menu ជាមួយ Avatar
 --=========================================
 local tpFrame = Instance.new("Frame")
 tpFrame.Size = UDim2.fromOffset(360, 360)
-tpFrame.Position = UDim2.new(1, 10, 0, 0) -- លេចចេញនៅខាងស្តាំ Main Menu
+tpFrame.Position = UDim2.new(1, 10, 0, 0)
 tpFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 25)
 tpFrame.BorderSizePixel = 0
 tpFrame.Visible = false
@@ -190,7 +190,7 @@ tpMenuButton.MouseButton1Click:Connect(function()
 end)
 
 --=========================================
--- មុខងារ Bypass Anti-Cheat Safe Fly
+-- Fix មុខងារ Fly Bypass លោតមកកន្លែងដើមវិញ
 --=========================================
 local flyTween, noclipLoop
 
@@ -203,9 +203,15 @@ local function stopFlying()
         noclipLoop:Disconnect()
         noclipLoop = nil
     end
+    
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.Anchored = false
+        local hrp = player.Character.HumanoidRootPart
+        -- លុប BodyVelocity ចោលដើម្បីឲ្យធ្លាក់វិញធម្មតា
+        local bv = hrp:FindFirstChild("JerryFlyBV")
+        if bv then bv:Destroy() end
+        hrp.Anchored = false 
     end
+    
     isFlying = false
     stopFlyButton.Visible = false
     status.Text = "Status: Flight Stopped."
@@ -222,23 +228,29 @@ local function flyToTarget(targetName)
     local hrp = player.Character.HumanoidRootPart
     local targetHrp = targetPlr.Character.HumanoidRootPart
 
-    -- ការពារ Anti-Cheat ដោយប្រើ TweenService
     local distance = (hrp.Position - targetHrp.Position).Magnitude
-    local speed = 150 -- ល្បឿនសុវត្ថិភាព (Studs ក្នុង ១ វិនាទី) (បើដាក់លឿនពេក AC អាចទាត់)
+    -- ល្បឿនសុវត្ថិភាព (Studs ក្នុង ១ វិនាទី) បើមើលទៅនៅតែឆក់មកក្រោយ ឲ្យបន្ថយល្បឿននេះមកត្រឹម 80 វិញ
+    local speed = 150 
     local flyTime = distance / speed
-    
-    if flyTime < 0.5 then flyTime = 0.5 end -- ការពារ Error ពេលនៅជិតពេក
+    if flyTime < 0.5 then flyTime = 0.5 end 
+
+    -- ប្រើ BodyVelocity ជំនួស Anchored = true ដើម្បីការពារការ Teleport មកកន្លែងដើម
+    local bv = hrp:FindFirstChild("JerryFlyBV")
+    if not bv then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "JerryFlyBV"
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bv.Velocity = Vector3.zero
+        bv.Parent = hrp
+    end
+    hrp.Anchored = false -- ធានាថាវាមិនជាប់ Anchor
 
     local tweenInfo = TweenInfo.new(flyTime, Enum.EasingStyle.Linear)
-    -- ហោះទៅពីក្រោយខ្នងគេបន្តិច ដើម្បីកុំឲ្យបុកគ្នា
     local targetGoal = targetHrp.CFrame * CFrame.new(0, 0, 3) 
-    
     flyTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetGoal})
 
-    -- ចាប់ផ្តើម Noclip (ដើរធ្លុះ) និង Anchor
     isFlying = true
     stopFlyButton.Visible = true
-    hrp.Anchored = true -- ការពារកុំឲ្យ Fall Damage និង Physics Anti-Cheat
     
     noclipLoop = RunService.Stepped:Connect(function()
         if player.Character then
@@ -253,16 +265,18 @@ local function flyToTarget(targetName)
     status.Text = "Status: Flying to " .. targetName .. "..."
     flyTween:Play()
 
-    flyTween.Completed:Connect(function()
-        stopFlying()
-        status.Text = "Status: Arrived at " .. targetName
+    flyTween.Completed:Connect(function(playbackState)
+        if playbackState == Enum.PlaybackState.Completed then
+            stopFlying()
+            status.Text = "Status: Arrived at " .. targetName
+        end
     end)
 end
 
 stopFlyButton.MouseButton1Click:Connect(stopFlying)
 
 --=========================================
--- មុខងារ Scan អ្នកលេងចូលក្នុងបញ្ជី
+-- មុខងារ Scan អ្នកលេងចូលក្នុងបញ្ជី + ទាញយករូប Avatar
 --=========================================
 local function loadPlayers()
     for _, child in pairs(scrollList:GetChildren()) do
@@ -271,21 +285,43 @@ local function loadPlayers()
     
     local count = 0
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then -- កុំដាក់ឈ្មោះខ្លួនឯង
+        if p ~= player then
             count += 1
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -10, 0, 40)
+            btn.Size = UDim2.new(1, -10, 0, 42)
             btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.Text = "  " .. p.Name .. " (@" .. p.DisplayName .. ")"
+            -- ដាក់ Space ពីមុខឲ្យធំដើម្បីទុកកន្លែងឲ្យរូប Avatar
+            btn.Text = "            " .. p.Name .. " (@" .. p.DisplayName .. ")"
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.GothamSemibold
-            btn.TextSize = 14
+            btn.TextSize = 13
             btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.Parent = scrollList
             
             local btnCorner = Instance.new("UICorner")
             btnCorner.CornerRadius = UDim.new(0, 8)
             btnCorner.Parent = btn
+
+            -- បង្កើតកន្លែងដាក់រូប Avatar 
+            local avatar = Instance.new("ImageLabel")
+            avatar.Size = UDim2.fromOffset(32, 32)
+            avatar.Position = UDim2.new(0, 5, 0.5, -16)
+            avatar.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+            avatar.Parent = btn
+            
+            local avatarCorner = Instance.new("UICorner")
+            avatarCorner.CornerRadius = UDim.new(1, 0)
+            avatarCorner.Parent = avatar
+            
+            -- ទាញយករូបពី Roblox ប្រើ task.spawn ដើម្បីកុំឲ្យគាំង Menu
+            task.spawn(function()
+                local success, img = pcall(function()
+                    return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+                end)
+                if success and img then
+                    avatar.Image = img
+                end
+            end)
 
             btn.MouseButton1Click:Connect(function()
                 if not isFlying then
@@ -294,11 +330,11 @@ local function loadPlayers()
             end)
         end
     end
-    scrollList.CanvasSize = UDim2.new(0, 0, 0, count * 45)
+    scrollList.CanvasSize = UDim2.new(0, 0, 0, count * 47)
 end
 
 refreshBtn.MouseButton1Click:Connect(loadPlayers)
-loadPlayers() -- លោតចូលហ្គេមភ្លាម Scan ភ្លាម
+loadPlayers()
 
 --=========================================
 -- មុខងារ Optimize ដដែល
@@ -373,7 +409,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Dragging Logic (Open Button & Menu)
+-- Dragging Logic
 local function makeDraggable(guiItem, dragHandle)
     local drag, start, pos, dragged
     dragHandle.InputBegan:Connect(function(input)
@@ -401,4 +437,4 @@ UIS.InputBegan:Connect(function(input, p)
     if not p and input.KeyCode == Enum.KeyCode.K then menu.Visible = not menu.Visible end
 end)
 
-print("Jerry Optimize 🔧 v4.0 (Anti-Cheat Bypass Fly) Loaded!")
+print("Jerry Optimize 🔧 v4.1 (Fixed Fly + Avatar) Loaded!")
