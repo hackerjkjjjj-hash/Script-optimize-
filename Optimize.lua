@@ -1,4 +1,4 @@
--- Jerry Hub v7.0 (Fast Mode + Safe Slow Fly + Anti-Cheat Protection)
+-- Jerry Hub v7.0 (Fixed Safe Fly over Water + Fast Mode Pro + Avatar List)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
@@ -48,7 +48,8 @@ local optimizeActive = false
 local boostActive = false
 local fastModeActive = false
 local boostConnections = {}
-local activeTween = nil
+local fastModeConnections = {}
+local activeFlight = nil
 
 -- Backup original settings
 local originalShadows = Lighting.GlobalShadows
@@ -85,7 +86,7 @@ local function applyOptimize(state)
 end
 
 --=========================================
--- 2. CLEAR FPS BOOST (Keep Textures Clear)
+-- 2. CLEAR FPS BOOST
 --=========================================
 local function optimizeObject(v)
     if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
@@ -133,8 +134,24 @@ local function applyBoost(state)
 end
 
 --=========================================
--- 3. FAST MODE (Max Performance / Low Quality)
+-- 3. FAST MODE (Flat Graphics)
 --=========================================
+local function applyFastObject(v)
+    if v:IsA("Decal") or v:IsA("Texture") then
+        pcall(function() v.Transparency = 1 end)
+    elseif v:IsA("BasePart") then
+        pcall(function()
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+        end)
+    elseif v:IsA("MeshPart") then
+        pcall(function()
+            v.TextureID = ""
+            v.Material = Enum.Material.SmoothPlastic
+        end)
+    end
+end
+
 local function applyFastMode(state)
     fastModeActive = state
     if state then
@@ -142,17 +159,27 @@ local function applyFastMode(state)
             settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
         end)
         for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("Decal") or v:IsA("Texture") then
-                pcall(function() v.Transparency = 1 end)
-            end
+            applyFastObject(v)
         end
+        local conn = Workspace.DescendantAdded:Connect(function(v)
+            if fastModeActive then
+                applyFastObject(v)
+            end
+        end)
+        table.insert(fastModeConnections, conn)
     else
+        for _, conn in ipairs(fastModeConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        fastModeConnections = {}
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
         end)
         for _, v in ipairs(Workspace:GetDescendants()) do
             if v:IsA("Decal") or v:IsA("Texture") then
                 pcall(function() v.Transparency = 0 end)
+            elseif v:IsA("BasePart") then
+                pcall(function() v.Material = Enum.Material.Plastic end)
             end
         end
     end
@@ -202,7 +229,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Jerry Hub 🔧 • Fast Mode & Safe Fly"
+title.Text = "Jerry Hub 🔧 • Fixed Safe Fly"
 title.TextColor3 = Color3.fromRGB(220, 180, 255)
 title.TextSize = 14
 title.Font = Enum.Font.GothamBold
@@ -356,12 +383,12 @@ createToggleCard("Clear FPS Boost", "Removes laggy particles & trails safely.", 
     applyBoost(state)
 end)
 
-createToggleCard("Fast Mode (Max Speed)", "Lowers graphics & quality for maximum FPS.", function(state)
+createToggleCard("Fast Mode (Flat Graphics)", "Removes textures & simplifies map for max FPS.", function(state)
     applyFastMode(state)
 end)
 
 --=========================================
--- POPULATE PLAYER PAGE (Safe Slow Fly)
+-- POPULATE PLAYER PAGE (Fixed Safe Fly over Water)
 --=========================================
 local pHeader = Instance.new("TextLabel")
 pHeader.Size = UDim2.new(1, 0, 0, 20)
@@ -372,24 +399,59 @@ pHeader.TextSize, pHeader.Font = 11, Enum.Font.GothamBold
 pHeader.TextXAlignment = Enum.TextXAlignment.Left
 pHeader.Parent = playerPage
 
--- កែសម្រួលល្បឿនឱ្យយឺតជាងមុន និងមានសុវត្ថិភាពការពារ Anti-Cheat ចាប់
+-- កែសម្រួលប្រព័ន្ធហោះហើរថ្មី មិនឱ្យធ្លាក់ទឹក និងការពារ Anti-Cheat
 local function safeFlyTo(targetPlr)
     if not targetPlr or not targetPlr.Character or not targetPlr.Character:FindFirstChild("HumanoidRootPart") then return end
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
 
-    local hrp = player.Character.HumanoidRootPart
+    local char = player.Character
+    local hrp = char.HumanoidRootPart
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
     local targetHrp = targetPlr.Character.HumanoidRootPart
 
-    if activeTween then activeTween:Cancel() end
+    if activeFlight then
+        pcall(function() activeFlight:Disconnect() end)
+        activeFlight = nil
+    end
 
-    local distance = (hrp.Position - targetHrp.Position).Magnitude
-    -- កែតម្រូវល្បឿន: ចែកនឹង 25 (ធ្វើឱ្យហោះយឺត និងរលូនជាងមុន មិនលឿនពេកធار Anti-Cheat ចាប់)
-    local travelTime = math.clamp(distance / 25, 2, 10) 
+    -- ផ្អាកកម្លាំងፊស៊ិច និងទំនាញ ដើម្បីកុំឱ្យធ្លាក់ទឹក
+    if humanoid then pcall(function() humanoid.PlatformStand = true end) end
+    hrp.Anchored = true
 
-    activeTween = TweenService:Create(hrp, TweenInfo.new(travelTime, Enum.EasingStyle.Sine), {
-        CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
-    })
-    activeTween:Play()
+    local startPos = hrp.Position
+    -- បន្ថែមរកម្ពស់ (Y + 12) ឱ្យហោះហើរកាត់ពីលើទឹក និងឧបសគ្គ
+    local endPos = targetHrp.Position + Vector3.new(0, 12, 0)
+    local distance = (startPos - endPos).Magnitude
+    local speed = 40 -- ល្បឿនសុវត្ថិភាព មិនឱ្យ Anti-Cheat ចាប់
+    local duration = math.clamp(distance / speed, 1, 8)
+    local startTime = tick()
+
+    activeFlight = RunService.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+
+        -- តាមដានទិសដៅ Player ជានិច្ច ក្រែងលោគេដើរចេញ
+        if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
+            endPos = targetPlr.Character.HumanoidRootPart.Position + Vector3.new(0, 12, 0)
+        end
+
+        local currentPos = startPos:Lerp(endPos, alpha)
+        hrp.CFrame = CFrame.new(currentPos, endPos)
+
+        if alpha >= 1 or not targetPlr.Character or not targetPlr.Character.Parent then
+            if activeFlight then
+                activeFlight:Disconnect()
+                activeFlight = nil
+            end
+            hrp.Anchored = false
+            if humanoid then pcall(function() humanoid.PlatformStand = false end) end
+
+            -- ទម្លាក់ចុះមកក្បែរ Player វិញដោយរលូន
+            if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
+                hrp.CFrame = targetPlr.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end)
 end
 
 local function loadPlayerList()
@@ -482,4 +544,4 @@ end)
 
 makeDraggable(mainFrame, topBar)
 
-print("Jerry Hub v7.0 Loaded Successfully (Fast Mode Added & Safe Slow Fly)!")
+print("Jerry Hub v7.0 Loaded Successfully (Fixed Safe Fly)!")
