@@ -1,9 +1,9 @@
--- Jerry Hub v7.5 (Auto Fly to Player & Stop on Arrival)
+-- Jerry Hub v7.6 (Removed Player Fly & Added Coming Soon)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-print("Jerry Hub v7.5: Initializing...")
+print("Jerry Hub v7.6: Initializing...")
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
@@ -28,17 +28,16 @@ pcall(function()
 end)
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "JerryHubUltimate"
+screenGui.Name = "Jerry Hub Ultimate"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = parentContainer
 
-print("Jerry Hub v7.5: UI successfully injected!")
+print("Jerry Hub v7.6: UI successfully injected!")
 
 -- States
 local boostConnections = {}
 local fastModeConnections = {}
-local activeFlight = nil
 
 -- Backup original settings
 local originalShadows = Lighting.GlobalShadows
@@ -199,7 +198,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Jerry Hub v1.0.0"
+title.Text = "Jerry Hub v7.6 • Optimized"
 title.TextColor3 = Color3.fromRGB(220, 180, 255)
 title.TextSize = 14
 title.Font = Enum.Font.GothamBold
@@ -249,13 +248,28 @@ mainPage.Parent = contentContainer
 Instance.new("UIListLayout", mainPage).Padding = UDim.new(0, 8)
 mainPage.CanvasSize = UDim2.new(0, 0, 0, 200)
 
-local playerPage = Instance.new("ScrollingFrame")
+local playerPage = Instance.new("Frame")
 playerPage.Size = UDim2.new(1, 0, 1, 0)
 playerPage.BackgroundTransparency = 1
-playerPage.ScrollBarThickness = 3
 playerPage.Visible = false
 playerPage.Parent = contentContainer
-Instance.new("UIListLayout", playerPage).Padding = UDim.new(0, 6)
+
+-- Coming Soon Card inside Player Page
+local comingSoonCard = Instance.new("Frame")
+comingSoonCard.Size = UDim2.new(1, -4, 0, 120)
+comingSoonCard.Position = UDim2.new(0, 0, 0.5, -60)
+comingSoonCard.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+comingSoonCard.Parent = playerPage
+Instance.new("UICorner", comingSoonCard).CornerRadius = UDim.new(0, 8)
+
+local csText = Instance.new("TextLabel")
+csText.Size = UDim2.new(1, 0, 1, 0)
+csText.BackgroundTransparency = 1
+csText.Text = "🚀 Coming Soon!\n\nPlayer features are currently under development."
+csText.TextColor3 = Color3.fromRGB(200, 160, 255)
+csText.TextSize, csText.Font = 13, Enum.Font.GothamBold
+csText.TextWrapped = true
+csText.Parent = comingSoonCard
 
 local function createTabBtn(name, icon, targetPage)
     local btn = Instance.new("TextButton")
@@ -358,127 +372,6 @@ createToggleCard("Fast Mode (Flat Graphics)", "Removes textures & simplifies map
 end)
 
 --=========================================
--- POPULATE PLAYER PAGE (Auto Fly & Stop on Arrival)
---=========================================
-local pHeader = Instance.new("TextLabel")
-pHeader.Size = UDim2.new(1, 0, 0, 20)
-pHeader.BackgroundTransparency = 1
-pHeader.Text = "👥 Click Player to Fly & Stop Automatically:"
-pHeader.TextColor3 = Color3.fromRGB(200, 160, 255)
-pHeader.TextSize, pHeader.Font = 11, Enum.Font.GothamBold
-pHeader.TextXAlignment = Enum.TextXAlignment.Left
-pHeader.Parent = playerPage
-
-local function flyToPlayer(targetPlr)
-    if activeFlight then
-        pcall(function() activeFlight:Disconnect() end)
-        activeFlight = nil
-    end
-
-    local char = player.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not humanoid then return end
-
-    humanoid.PlatformStand = true
-    humanoid.AutoRotate = false
-
-    local SPEED = 250
-    local HEIGHT_OFFSET = 6 -- ហោះពីលើបន្តិចដើម្បីការពារការប៉ះទឹក ឬជម្រាលដី
-
-    activeFlight = RunService.Heartbeat:Connect(function(dt)
-        if not targetPlr.Parent or not targetPlr.Character then
-            if activeFlight then activeFlight:Disconnect() end
-            activeFlight = nil
-            humanoid.PlatformStand = false
-            humanoid.AutoRotate = true
-            return
-        end
-
-        local targetChar = targetPlr.Character
-        local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-        if not targetHrp or not hrp.Parent then
-            if activeFlight then activeFlight:Disconnect() end
-            activeFlight = nil
-            humanoid.PlatformStand = false
-            humanoid.AutoRotate = true
-            return
-        end
-
-        local targetPosition = targetHrp.Position + Vector3.new(0, HEIGHT_OFFSET, 0)
-        local currentPosition = hrp.Position
-        local direction = targetPosition - currentPosition
-        local distance = direction.Magnitude
-
-        -- បើទៅដល់ជិត (ចម្ងាយតិចជាង 4) វានឹងឈប់ដោយស្វ័យប្រវត្តិ
-        if distance <= 4 then
-            if activeFlight then activeFlight:Disconnect() end
-            activeFlight = nil
-
-            hrp.CFrame = CFrame.new(targetPosition, targetHrp.Position)
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            
-            humanoid.PlatformStand = false
-            humanoid.AutoRotate = true
-            print("Jerry Hub: Arrived at target player successfully!")
-            return
-        end
-
-        local step = math.min(SPEED * dt, distance)
-        local nextPosition = currentPosition + direction.Unit * step
-
-        hrp.CFrame = CFrame.lookAt(nextPosition, targetHrp.Position)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-    end)
-end
-
-local function loadPlayerList()
-    for _, child in pairs(playerPage:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    
-    local count = 0
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            count += 1
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -4, 0, 36)
-            btn.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
-            btn.Text = "        " .. p.Name
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn.TextSize, btn.Font = 11, Enum.Font.GothamSemibold
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.Parent = playerPage
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            
-            local avatar = Instance.new("ImageLabel")
-            avatar.Size = UDim2.new(0, 26, 0, 26)
-            avatar.Position = UDim2.new(0, 5, 0.5, -13)
-            avatar.BackgroundColor3 = Color3.fromRGB(15, 13, 22)
-            avatar.Parent = btn
-            Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
-            
-            task.spawn(function()
-                local success, img = pcall(function()
-                    return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
-                end)
-                if success and img then avatar.Image = img end
-            end)
-
-            btn.MouseButton1Click:Connect(function()
-                flyToPlayer(p)
-            end)
-        end
-    end
-    playerPage.CanvasSize = UDim2.new(0, 0, 0, count * 40)
-end
-
-loadPlayerList()
-Players.PlayerAdded:Connect(loadPlayerList)
-Players.PlayerRemoving:Connect(loadPlayerList)
-
---=========================================
 -- DRAGGING LOGIC
 --=========================================
 local function makeDraggable(guiItem, dragHandle)
@@ -523,4 +416,4 @@ end)
 
 makeDraggable(mainFrame, topBar)
 
-print("Jerry Hub v7.5 Fully Loaded Successfully!")
+print("Jerry Hub v7.6 Fully Loaded Successfully!")
