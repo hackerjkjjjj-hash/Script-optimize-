@@ -1,4 +1,4 @@
--- Jerry Hub v7.0 (Fixed Safe Fly over Water + Fast Mode Pro + Avatar List)
+-- Jerry Hub v7.0 (Fixed Rubber-Band & Safe Fly)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
@@ -229,7 +229,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Jerry Hub 🔧 • Fixed Safe Fly"
+title.Text = "Jerry Hub 🔧 • Anti-RubberBand Fly"
 title.TextColor3 = Color3.fromRGB(220, 180, 255)
 title.TextSize = 14
 title.Font = Enum.Font.GothamBold
@@ -388,7 +388,7 @@ createToggleCard("Fast Mode (Flat Graphics)", "Removes textures & simplifies map
 end)
 
 --=========================================
--- POPULATE PLAYER PAGE (Fixed Safe Fly over Water)
+-- POPULATE PLAYER PAGE (Anti-RubberBand Fly)
 --=========================================
 local pHeader = Instance.new("TextLabel")
 pHeader.Size = UDim2.new(1, 0, 0, 20)
@@ -399,7 +399,6 @@ pHeader.TextSize, pHeader.Font = 11, Enum.Font.GothamBold
 pHeader.TextXAlignment = Enum.TextXAlignment.Left
 pHeader.Parent = playerPage
 
--- កែសម្រួលប្រព័ន្ធហោះហើរថ្មី មិនឱ្យធ្លាក់ទឹក និងការពារ Anti-Cheat
 local function safeFlyTo(targetPlr)
     if not targetPlr or not targetPlr.Character or not targetPlr.Character:FindFirstChild("HumanoidRootPart") then return end
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
@@ -414,42 +413,44 @@ local function safeFlyTo(targetPlr)
         activeFlight = nil
     end
 
-    -- ផ្អាកកម្លាំងፊស៊ិច និងទំនាញ ដើម្បីកុំឱ្យធ្លាក់ទឹក
     if humanoid then pcall(function() humanoid.PlatformStand = true end) end
-    hrp.Anchored = true
 
     local startPos = hrp.Position
-    -- បន្ថែមរកម្ពស់ (Y + 12) ឱ្យហោះហើរកាត់ពីលើទឹក និងឧបសគ្គ
-    local endPos = targetHrp.Position + Vector3.new(0, 12, 0)
+    local endPos = targetHrp.Position + Vector3.new(0, 10, 0)
     local distance = (startPos - endPos).Magnitude
-    local speed = 40 -- ល្បឿនសុវត្ថិភាព មិនឱ្យ Anti-Cheat ចាប់
-    local duration = math.clamp(distance / speed, 1, 8)
+    local speed = 60 -- ល្បឿនល្មមមិនឱ្យ Server ចាប់កំហុស
+    local duration = math.clamp(distance / speed, 0.8, 5)
     local startTime = tick()
 
     activeFlight = RunService.Heartbeat:Connect(function()
         local elapsed = tick() - startTime
         local alpha = math.clamp(elapsed / duration, 0, 1)
 
-        -- តាមដានទិសដៅ Player ជានិច្ច ក្រែងលោគេដើរចេញ
         if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
-            endPos = targetPlr.Character.HumanoidRootPart.Position + Vector3.new(0, 12, 0)
+            endPos = targetPlr.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0)
         end
 
         local currentPos = startPos:Lerp(endPos, alpha)
         hrp.CFrame = CFrame.new(currentPos, endPos)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- ទប់កុំឱ្យ Server ទាញទម្លាក់
 
         if alpha >= 1 or not targetPlr.Character or not targetPlr.Character.Parent then
             if activeFlight then
                 activeFlight:Disconnect()
                 activeFlight = nil
             end
-            hrp.Anchored = false
-            if humanoid then pcall(function() humanoid.PlatformStand = false end) end
 
-            -- ទម្លាក់ចុះមកក្បែរ Player វិញដោយរលូន
+            -- បង្ខំផ្ញើទិន្នន័យទីតាំងចុងក្រោយទៅ Server (ការពារការទាញមកកន្លែងដើម)
             if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
-                hrp.CFrame = targetPlr.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                local finalCFrame = targetPlr.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                for i = 1, 8 do
+                    hrp.CFrame = finalCFrame
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    RunService.Heartbeat:Wait()
+                end
             end
+
+            if humanoid then pcall(function() humanoid.PlatformStand = false end) end
         end
     end)
 end
@@ -544,4 +545,4 @@ end)
 
 makeDraggable(mainFrame, topBar)
 
-print("Jerry Hub v7.0 Loaded Successfully (Fixed Safe Fly)!")
+print("Jerry Hub v7.0 Loaded Successfully (Anti-RubberBand Fixed)!")
