@@ -1,7 +1,9 @@
--- Jerry Hub v7.0 (Fixed Rubber-Band & Safe Fly)
+-- Jerry Hub v7.5 (Auto Fly to Player & Stop on Arrival)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
+
+print("Jerry Hub v7.5: Initializing...")
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
@@ -9,44 +11,31 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 
--- Safe GUI Parent for Executors
-local guiParent
-local success, res = pcall(function() return gethui() end)
-if success and res then
-    guiParent = res
-else
-    guiParent = CoreGui
-end
+-- Smart GUI Parent (Bypass CoreGui blocking)
+local parentContainer = pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui") or player:WaitForChild("PlayerGui")
 
+-- Clear old UI if exists
 pcall(function()
-    if guiParent:FindFirstChild("JerryHubComplete") then
-        guiParent.JerryHubComplete:Destroy()
+    if parentContainer:FindFirstChild("JerryHubUltimate") then
+        parentContainer.JerryHubUltimate:Destroy()
     end
-    if player.PlayerGui:FindFirstChild("JerryHubComplete") then
-        player.PlayerGui.JerryHubComplete:Destroy()
+    if player.PlayerGui:FindFirstChild("JerryHubUltimate") then
+        player.PlayerGui.JerryHubUltimate:Destroy()
     end
 end)
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "JerryHubComplete"
+screenGui.Name = "JerryHubUltimate"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = parentContainer
 
-local parentSuccess = pcall(function()
-    screenGui.Parent = guiParent
-end)
-if not parentSuccess then
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-end
+print("Jerry Hub v7.5: UI successfully injected!")
 
 -- States
-local optimizeActive = false
-local boostActive = false
-local fastModeActive = false
 local boostConnections = {}
 local fastModeConnections = {}
 local activeFlight = nil
@@ -67,7 +56,6 @@ end
 -- 1. NORMAL OPTIMIZE
 --=========================================
 local function applyOptimize(state)
-    optimizeActive = state
     if state then
         pcall(function() Lighting.GlobalShadows = false end)
         pcall(function() Lighting.Technology = Enum.LightingTechnology.Compatibility end)
@@ -97,7 +85,6 @@ local function optimizeObject(v)
 end
 
 local function applyBoost(state)
-    boostActive = state
     if state then
         if terrain then
             pcall(function()
@@ -109,7 +96,7 @@ local function applyBoost(state)
             optimizeObject(v)
         end
         local conn = Workspace.DescendantAdded:Connect(function(v)
-            if boostActive then optimizeObject(v) end
+            optimizeObject(v)
         end)
         table.insert(boostConnections, conn)
     else
@@ -122,13 +109,6 @@ local function applyBoost(state)
                 terrain.WaterWaveSize = 0.5
                 terrain.WaterTransparency = 0.6
             end)
-        end
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-                pcall(function() v.Enabled = true end)
-            elseif v:IsA("BasePart") then
-                pcall(function() v.CastShadow = true end)
-            end
         end
     end
 end
@@ -153,7 +133,6 @@ local function applyFastObject(v)
 end
 
 local function applyFastMode(state)
-    fastModeActive = state
     if state then
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
@@ -162,9 +141,7 @@ local function applyFastMode(state)
             applyFastObject(v)
         end
         local conn = Workspace.DescendantAdded:Connect(function(v)
-            if fastModeActive then
-                applyFastObject(v)
-            end
+            applyFastObject(v)
         end)
         table.insert(fastModeConnections, conn)
     else
@@ -175,13 +152,6 @@ local function applyFastMode(state)
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
         end)
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("Decal") or v:IsA("Texture") then
-                pcall(function() v.Transparency = 0 end)
-            elseif v:IsA("BasePart") then
-                pcall(function() v.Material = Enum.Material.Plastic end)
-            end
-        end
     end
 end
 
@@ -189,11 +159,11 @@ end
 -- FLOATING OPEN BUTTON (Wrench)
 --=========================================
 local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0, 48, 0, 48)
-openBtn.Position = UDim2.new(0, 20, 0.4, 0)
+openBtn.Size = UDim2.new(0, 52, 0, 52)
+openBtn.Position = UDim2.new(0, 30, 0.4, 0)
 openBtn.BackgroundColor3 = Color3.fromRGB(20, 18, 30)
 openBtn.Text = "🔧"
-openBtn.TextSize = 22
+openBtn.TextSize = 24
 openBtn.Parent = screenGui
 
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
@@ -229,7 +199,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Jerry Hub 🔧 • Anti-RubberBand Fly"
+title.Text = "Jerry Hub v1.0.0"
 title.TextColor3 = Color3.fromRGB(220, 180, 255)
 title.TextSize = 14
 title.Font = Enum.Font.GothamBold
@@ -388,70 +358,78 @@ createToggleCard("Fast Mode (Flat Graphics)", "Removes textures & simplifies map
 end)
 
 --=========================================
--- POPULATE PLAYER PAGE (Anti-RubberBand Fly)
+-- POPULATE PLAYER PAGE (Auto Fly & Stop on Arrival)
 --=========================================
 local pHeader = Instance.new("TextLabel")
 pHeader.Size = UDim2.new(1, 0, 0, 20)
 pHeader.BackgroundTransparency = 1
-pHeader.Text = "👥 Click Player to Safe Smooth Fly:"
+pHeader.Text = "👥 Click Player to Fly & Stop Automatically:"
 pHeader.TextColor3 = Color3.fromRGB(200, 160, 255)
 pHeader.TextSize, pHeader.Font = 11, Enum.Font.GothamBold
 pHeader.TextXAlignment = Enum.TextXAlignment.Left
 pHeader.Parent = playerPage
 
-local function safeFlyTo(targetPlr)
-    if not targetPlr or not targetPlr.Character or not targetPlr.Character:FindFirstChild("HumanoidRootPart") then return end
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-
-    local char = player.Character
-    local hrp = char.HumanoidRootPart
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    local targetHrp = targetPlr.Character.HumanoidRootPart
-
+local function flyToPlayer(targetPlr)
     if activeFlight then
         pcall(function() activeFlight:Disconnect() end)
         activeFlight = nil
     end
 
-    if humanoid then pcall(function() humanoid.PlatformStand = true end) end
+    local char = player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not humanoid then return end
 
-    local startPos = hrp.Position
-    local endPos = targetHrp.Position + Vector3.new(0, 10, 0)
-    local distance = (startPos - endPos).Magnitude
-    local speed = 60 -- ល្បឿនល្មមមិនឱ្យ Server ចាប់កំហុស
-    local duration = math.clamp(distance / speed, 0.8, 5)
-    local startTime = tick()
+    humanoid.PlatformStand = true
+    humanoid.AutoRotate = false
 
-    activeFlight = RunService.Heartbeat:Connect(function()
-        local elapsed = tick() - startTime
-        local alpha = math.clamp(elapsed / duration, 0, 1)
+    local SPEED = 250
+    local HEIGHT_OFFSET = 6 -- ហោះពីលើបន្តិចដើម្បីការពារការប៉ះទឹក ឬជម្រាលដី
 
-        if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
-            endPos = targetPlr.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0)
+    activeFlight = RunService.Heartbeat:Connect(function(dt)
+        if not targetPlr.Parent or not targetPlr.Character then
+            if activeFlight then activeFlight:Disconnect() end
+            activeFlight = nil
+            humanoid.PlatformStand = false
+            humanoid.AutoRotate = true
+            return
         end
 
-        local currentPos = startPos:Lerp(endPos, alpha)
-        hrp.CFrame = CFrame.new(currentPos, endPos)
-        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- ទប់កុំឱ្យ Server ទាញទម្លាក់
-
-        if alpha >= 1 or not targetPlr.Character or not targetPlr.Character.Parent then
-            if activeFlight then
-                activeFlight:Disconnect()
-                activeFlight = nil
-            end
-
-            -- បង្ខំផ្ញើទិន្នន័យទីតាំងចុងក្រោយទៅ Server (ការពារការទាញមកកន្លែងដើម)
-            if targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") then
-                local finalCFrame = targetPlr.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                for i = 1, 8 do
-                    hrp.CFrame = finalCFrame
-                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    RunService.Heartbeat:Wait()
-                end
-            end
-
-            if humanoid then pcall(function() humanoid.PlatformStand = false end) end
+        local targetChar = targetPlr.Character
+        local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+        if not targetHrp or not hrp.Parent then
+            if activeFlight then activeFlight:Disconnect() end
+            activeFlight = nil
+            humanoid.PlatformStand = false
+            humanoid.AutoRotate = true
+            return
         end
+
+        local targetPosition = targetHrp.Position + Vector3.new(0, HEIGHT_OFFSET, 0)
+        local currentPosition = hrp.Position
+        local direction = targetPosition - currentPosition
+        local distance = direction.Magnitude
+
+        -- បើទៅដល់ជិត (ចម្ងាយតិចជាង 4) វានឹងឈប់ដោយស្វ័យប្រវត្តិ
+        if distance <= 4 then
+            if activeFlight then activeFlight:Disconnect() end
+            activeFlight = nil
+
+            hrp.CFrame = CFrame.new(targetPosition, targetHrp.Position)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            
+            humanoid.PlatformStand = false
+            humanoid.AutoRotate = true
+            print("Jerry Hub: Arrived at target player successfully!")
+            return
+        end
+
+        local step = math.min(SPEED * dt, distance)
+        local nextPosition = currentPosition + direction.Unit * step
+
+        hrp.CFrame = CFrame.lookAt(nextPosition, targetHrp.Position)
+        hrp.AssemblyLinearVelocity = Vector3.zero
     end)
 end
 
@@ -489,7 +467,7 @@ local function loadPlayerList()
             end)
 
             btn.MouseButton1Click:Connect(function()
-                safeFlyTo(p)
+                flyToPlayer(p)
             end)
         end
     end
@@ -545,4 +523,4 @@ end)
 
 makeDraggable(mainFrame, topBar)
 
-print("Jerry Hub v7.0 Loaded Successfully (Anti-RubberBand Fixed)!")
+print("Jerry Hub v7.5 Fully Loaded Successfully!")
