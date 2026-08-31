@@ -254,22 +254,167 @@ playerPage.BackgroundTransparency = 1
 playerPage.Visible = false
 playerPage.Parent = contentContainer
 
--- Coming Soon Card inside Player Page
-local comingSoonCard = Instance.new("Frame")
-comingSoonCard.Size = UDim2.new(1, -4, 0, 120)
-comingSoonCard.Position = UDim2.new(0, 0, 0.5, -60)
-comingSoonCard.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
-comingSoonCard.Parent = playerPage
-Instance.new("UICorner", comingSoonCard).CornerRadius = UDim.new(0, 8)
+--=========================================
+-- PLAYER PAGE - ESP UI
+--=========================================
 
-local csText = Instance.new("TextLabel")
-csText.Size = UDim2.new(1, 0, 1, 0)
-csText.BackgroundTransparency = 1
-csText.Text = "🚀 Coming Soon!\n\nPlayer features are currently under development."
-csText.TextColor3 = Color3.fromRGB(200, 160, 255)
-csText.TextSize, csText.Font = 13, Enum.Font.GothamBold
-csText.TextWrapped = true
-csText.Parent = comingSoonCard
+local espBoxEnabled = false
+local espLineEnabled = false
+
+local playerPageLayout = Instance.new("UIListLayout")
+playerPageLayout.Padding = UDim.new(0, 8)
+playerPageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+playerPageLayout.Parent = playerPage
+
+-- Header Card
+local playerHeader = Instance.new("Frame")
+playerHeader.Size = UDim2.new(1, -4, 0, 55)
+playerHeader.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+playerHeader.Parent = playerPage
+
+Instance.new("UICorner", playerHeader).CornerRadius = UDim.new(0, 8)
+
+local playerHeaderTitle = Instance.new("TextLabel")
+playerHeaderTitle.Size = UDim2.new(1, -24, 0, 22)
+playerHeaderTitle.Position = UDim2.new(0, 12, 0, 7)
+playerHeaderTitle.BackgroundTransparency = 1
+playerHeaderTitle.Text = "Player Visuals"
+playerHeaderTitle.TextColor3 = Color3.fromRGB(220, 180, 255)
+playerHeaderTitle.TextSize = 14
+playerHeaderTitle.Font = Enum.Font.GothamBold
+playerHeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+playerHeaderTitle.Parent = playerHeader
+
+local playerHeaderDesc = Instance.new("TextLabel")
+playerHeaderDesc.Size = UDim2.new(1, -24, 0, 18)
+playerHeaderDesc.Position = UDim2.new(0, 12, 0, 29)
+playerHeaderDesc.BackgroundTransparency = 1
+playerHeaderDesc.Text = "Visual feature controls"
+playerHeaderDesc.TextColor3 = Color3.fromRGB(140, 130, 170)
+playerHeaderDesc.TextSize = 10
+playerHeaderDesc.Font = Enum.Font.Gotham
+playerHeaderDesc.TextXAlignment = Enum.TextXAlignment.Left
+playerHeaderDesc.Parent = playerHeader
+
+
+-- Toggle Card Creator
+local function createPlayerToggle(titleText, descText, callback)
+
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -4, 0, 62)
+    card.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+    card.Parent = playerPage
+
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -70, 0, 19)
+    titleLabel.Position = UDim2.new(0, 12, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = titleText
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 13
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = card
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -70, 0, 18)
+    descLabel.Position = UDim2.new(0, 12, 0, 29)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = descText
+    descLabel.TextColor3 = Color3.fromRGB(140, 130, 170)
+    descLabel.TextSize = 10
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.Parent = card
+
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 42, 0, 22)
+    toggleBtn.Position = UDim2.new(1, -54, 0.5, -11)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 40, 60)
+    toggleBtn.Text = ""
+    toggleBtn.AutoButtonColor = false
+    toggleBtn.Parent = card
+
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+    local circle = Instance.new("Frame")
+    circle.Size = UDim2.new(0, 16, 0, 16)
+    circle.Position = UDim2.new(0, 3, 0.5, -8)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    circle.Parent = toggleBtn
+
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+
+    local enabled = false
+
+    toggleBtn.MouseButton1Click:Connect(function()
+
+        enabled = not enabled
+
+        local targetPosition
+
+        if enabled then
+            targetPosition = UDim2.new(1, -19, 0.5, -8)
+
+            TweenService:Create(
+                toggleBtn,
+                TweenInfo.new(0.2),
+                {
+                    BackgroundColor3 = Color3.fromRGB(126, 34, 206)
+                }
+            ):Play()
+
+        else
+            targetPosition = UDim2.new(0, 3, 0.5, -8)
+
+            TweenService:Create(
+                toggleBtn,
+                TweenInfo.new(0.2),
+                {
+                    BackgroundColor3 = Color3.fromRGB(45, 40, 60)
+                }
+            ):Play()
+        end
+
+        TweenService:Create(
+            circle,
+            TweenInfo.new(0.2),
+            {
+                Position = targetPosition
+            }
+        ):Play()
+
+        callback(enabled)
+    end)
+
+    return card
+end
+
+
+-- ESP BOX
+createPlayerToggle(
+    "ESP Box",
+    "Box visual control",
+    function(state)
+        espBoxEnabled = state
+
+        print("ESP Box UI:", state and "ON" or "OFF")
+    end
+)
+
+
+-- ESP LINE
+createPlayerToggle(
+    "ESP Line",
+    "Line visual control",
+    function(state)
+        espLineEnabled = state
+
+        print("ESP Line UI:", state and "ON" or "OFF")
+    end
+)
 
 local function createTabBtn(name, icon, targetPage)
     local btn = Instance.new("TextButton")
