@@ -107,12 +107,15 @@ Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = TopBar
 
 --==================================================
--- DRAG MAIN FRAME
+-- SMOOTH DRAG MAIN FRAME
 --==================================================
+
+local UserInputService = game:GetService("UserInputService")
 
 local draggingMain = false
 local dragStartMain
 local startPosMain
+local dragInputMain
 
 TopBar.InputBegan:Connect(function(input)
 
@@ -132,32 +135,38 @@ TopBar.InputChanged:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local dragInput = input
+		dragInputMain = input
 
-		dragInput.Changed:Connect(function()
+	end
 
-			if dragInput.UserInputState == Enum.UserInputState.End then
-				draggingMain = false
-			end
+end)
 
-		end)
+UserInputService.InputChanged:Connect(function(input)
 
-		RunService.RenderStepped:Connect(function()
+	if input == dragInputMain and draggingMain then
 
-			if draggingMain then
+		local delta = input.Position - dragStartMain
 
-				local delta = dragInput.Position - dragStartMain
+		local targetPosition = UDim2.new(
+			startPosMain.X.Scale,
+			startPosMain.X.Offset + delta.X,
+			startPosMain.Y.Scale,
+			startPosMain.Y.Offset + delta.Y
+		)
 
-				MainFrame.Position = UDim2.new(
-					startPosMain.X.Scale,
-					startPosMain.X.Offset + delta.X,
-					startPosMain.Y.Scale,
-					startPosMain.Y.Offset + delta.Y
-				)
+		-- Smooth movement
+		MainFrame.Position = MainFrame.Position:Lerp(targetPosition, 0.35)
 
-			end
+	end
 
-		end)
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		draggingMain = false
 
 	end
 
