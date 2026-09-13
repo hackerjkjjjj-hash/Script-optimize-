@@ -34,6 +34,51 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = PlayerGui
 
+
+--==================================================
+-- WELCOME MESSAGE
+--==================================================
+
+local Welcome = Instance.new("TextLabel")
+Welcome.Name = "WelcomeMessage"
+Welcome.Size = UDim2.fromOffset(360, 70)
+Welcome.AnchorPoint = Vector2.new(0.5, 0.5)
+Welcome.Position = UDim2.fromScale(0.5, 0.5)
+Welcome.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Welcome.BackgroundTransparency = 0.2
+Welcome.BorderSizePixel = 0
+Welcome.Text = "Welcome, " .. Player.DisplayName
+Welcome.TextSize = 26
+Welcome.Font = Enum.Font.GothamBold
+Welcome.TextXAlignment = Enum.TextXAlignment.Center
+Welcome.TextYAlignment = Enum.TextYAlignment.Center
+Welcome.ZIndex = 2000
+Welcome.Parent = ScreenGui
+
+local WelcomeCorner = Instance.new("UICorner")
+WelcomeCorner.CornerRadius = UDim.new(0, 14)
+WelcomeCorner.Parent = Welcome
+
+-- Rainbow text animation
+local welcomeRainbowRunning = true
+
+task.spawn(function()
+    local hue = 0
+    while welcomeRainbowRunning and Welcome.Parent do
+        hue = (hue + 0.008) % 1
+        Welcome.TextColor3 = Color3.fromHSV(hue, 1, 1)
+        task.wait(0.03)
+    end
+end)
+
+-- Keep welcome visible for 5 seconds
+ task.delay(5, function()
+    welcomeRainbowRunning = false
+    if Welcome and Welcome.Parent then
+        Welcome:Destroy()
+    end
+end)
+
 --==================================================
 -- MAIN FRAME
 --==================================================
@@ -241,8 +286,13 @@ RestoreCorner.Parent = RestoreButton
 local OriginalParts = {}
 local OriginalEffects = {}
 local OriginalTextures = {}
+local OriginalSurfaceAppearances = {}
+local SurfaceStorage = Instance.new("Folder")
+SurfaceStorage.Name = "_JerrySurfaceStorage"
+SurfaceStorage.Parent = nil
 
 local BoosterEnabled = false
+local OriginalGlobalShadows = Lighting.GlobalShadows
 
 --==================================================
 -- SAVE PART
@@ -310,13 +360,41 @@ pcall(function()
 end)
 
 --==================================================
+-- DISABLE LIGHTING / VISUAL EFFECTS
+--==================================================
+
+local function DisableLightingEffects()
+
+	pcall(function()
+		Lighting.GlobalShadows = false
+	end)
+
+	for _, object in ipairs(Lighting:GetDescendants()) do
+
+		if object:IsA("PostEffect")
+			or object:IsA("BloomEffect")
+			or object:IsA("BlurEffect")
+			or object:IsA("SunRaysEffect")
+			or object:IsA("ColorCorrectionEffect")
+			or object:IsA("DepthOfFieldEffect") then
+
+			SaveEffect(object)
+			object.Enabled = false
+
+		end
+
+	end
+
+end
+
+--==================================================
 -- APPLY BOOST
 --==================================================
 
 local function ApplyBoost()
 
-	-- No shadow graphics
-	Lighting.GlobalShadows = false
+	-- No shadow graphics / lighting post effects
+	DisableLightingEffects()
 
 	for _, object in ipairs(workspace:GetDescendants()) do
 
@@ -326,6 +404,13 @@ local function ApplyBoost()
 
 			object.Material = Enum.Material.SmoothPlastic
 			object.CastShadow = false
+			object.Reflectance = 0
+
+			local surface = object:FindFirstChildOfClass("SurfaceAppearance")
+			if surface and not OriginalSurfaceAppearances[surface] then
+				OriginalSurfaceAppearances[surface] = object
+				surface.Parent = SurfaceStorage
+			end
 
 		elseif object:IsA("PostEffect")
 			or object:IsA("ParticleEmitter")
@@ -371,9 +456,10 @@ end
 
 local function RestoreOriginal()
 
-	-- Keep the player's original shadow setting when possible.
-	-- GlobalShadows is a Lighting setting, so restore to Roblox's normal value.
-	Lighting.GlobalShadows = true
+	-- Restore the original global shadow setting.
+	pcall(function()
+		Lighting.GlobalShadows = OriginalGlobalShadows
+	end)
 
 	for part, data in pairs(OriginalParts) do
 
@@ -398,6 +484,14 @@ local function RestoreOriginal()
 
 		if object and object.Parent then
 			object.Transparency = transparency
+		end
+
+	end
+
+	for surface, parentPart in pairs(OriginalSurfaceAppearances) do
+
+		if surface and parentPart and parentPart.Parent then
+			surface.Parent = parentPart
 		end
 
 	end
@@ -466,6 +560,12 @@ workspace.DescendantAdded:Connect(function(object)
 
 		object.Material = Enum.Material.SmoothPlastic
 		object.CastShadow = false
+		object.Reflectance = 0
+
+		local surface = object:FindFirstChildOfClass("SurfaceAppearance")
+		if surface then
+			surface:Destroy()
+		end
 
 	elseif object:IsA("PostEffect")
 		or object:IsA("ParticleEmitter")
