@@ -5,8 +5,7 @@
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -16,19 +15,19 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 --==================================================
 
 local LOGO_ID = "rbxassetid://135995313313068"
+local BUTTON_LOGO_ID = "rbxassetid://127978764819014"
 
--- Open / Close Button Image
-local BUTTON_IMAGE_ID = "rbxassetid://127978764819014"
+local rotationSpeed = 90 -- degrees per second
 
 --==================================================
--- SCREEN GUI
+-- GUI
 --==================================================
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JerryFPSBooster"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 999
 ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = PlayerGui
 
 --==================================================
@@ -37,15 +36,14 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.fromOffset(330, 260)
+MainFrame.Size = UDim2.new(0, 330, 0, 260)
 MainFrame.Position = UDim2.new(0.5, -165, 0.5, -130)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BackgroundTransparency = 0.15
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 14)
 MainCorner.Parent = MainFrame
 
 --==================================================
@@ -55,13 +53,12 @@ MainCorner.Parent = MainFrame
 local TopBar = Instance.new("Frame")
 TopBar.Name = "TopBar"
 TopBar.Size = UDim2.new(1, 0, 0, 65)
-TopBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-TopBar.BackgroundTransparency = 0.1
+TopBar.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 
 local TopCorner = Instance.new("UICorner")
-TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.CornerRadius = UDim.new(0, 14)
 TopCorner.Parent = TopBar
 
 --==================================================
@@ -70,12 +67,15 @@ TopCorner.Parent = TopBar
 
 local Logo = Instance.new("ImageLabel")
 Logo.Name = "Logo"
-Logo.Size = UDim2.fromOffset(45, 45)
-Logo.Position = UDim2.fromOffset(10, 10)
+Logo.Size = UDim2.new(0, 45, 0, 45)
+Logo.Position = UDim2.new(0, 10, 0.5, -22)
 Logo.BackgroundTransparency = 1
 Logo.Image = LOGO_ID
-Logo.ScaleType = Enum.ScaleType.Fit
 Logo.Parent = TopBar
+
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.Parent = Logo
 
 --==================================================
 -- TITLE
@@ -84,7 +84,7 @@ Logo.Parent = TopBar
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Size = UDim2.new(1, -70, 0, 30)
-Title.Position = UDim2.fromOffset(65, 8)
+Title.Position = UDim2.new(0, 65, 0, 8)
 Title.BackgroundTransparency = 1
 Title.Text = "FPS BOOSTER"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -95,11 +95,11 @@ Title.Parent = TopBar
 
 local Subtitle = Instance.new("TextLabel")
 Subtitle.Name = "Subtitle"
-Subtitle.Size = UDim2.new(1, -70, 0, 22)
-Subtitle.Position = UDim2.fromOffset(65, 35)
+Subtitle.Size = UDim2.new(1, -70, 0, 20)
+Subtitle.Position = UDim2.new(0, 65, 0, 37)
 Subtitle.BackgroundTransparency = 1
 Subtitle.Text = "Low Graphics • Smooth Mode"
-Subtitle.TextColor3 = Color3.fromRGB(170, 170, 170)
+Subtitle.TextColor3 = Color3.fromRGB(160, 160, 160)
 Subtitle.TextSize = 12
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -110,8 +110,8 @@ Subtitle.Parent = TopBar
 --==================================================
 
 local draggingMain = false
-local dragStart
-local startPos
+local dragStartMain
+local startPosMain
 
 TopBar.InputBegan:Connect(function(input)
 
@@ -119,35 +119,47 @@ TopBar.InputBegan:Connect(function(input)
 		or input.UserInputType == Enum.UserInputType.Touch then
 
 		draggingMain = true
-		dragStart = input.Position
-		startPos = MainFrame.Position
+		dragStartMain = input.Position
+		startPosMain = MainFrame.Position
 
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				draggingMain = false
-			end
-		end)
 	end
+
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-
-	if not draggingMain then
-		return
-	end
+TopBar.InputChanged:Connect(function(input)
 
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local delta = input.Position - dragStart
+		local dragInput = input
 
-		MainFrame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
+		dragInput.Changed:Connect(function()
+
+			if dragInput.UserInputState == Enum.UserInputState.End then
+				draggingMain = false
+			end
+
+		end)
+
+		RunService.RenderStepped:Connect(function()
+
+			if draggingMain then
+
+				local delta = dragInput.Position - dragStartMain
+
+				MainFrame.Position = UDim2.new(
+					startPosMain.X.Scale,
+					startPosMain.X.Offset + delta.X,
+					startPosMain.Y.Scale,
+					startPosMain.Y.Offset + delta.Y
+				)
+
+			end
+
+		end)
+
 	end
+
 end)
 
 --==================================================
@@ -157,7 +169,7 @@ end)
 local PageTitle = Instance.new("TextLabel")
 PageTitle.Name = "PageTitle"
 PageTitle.Size = UDim2.new(1, -30, 0, 30)
-PageTitle.Position = UDim2.fromOffset(15, 78)
+PageTitle.Position = UDim2.new(0, 15, 0, 80)
 PageTitle.BackgroundTransparency = 1
 PageTitle.Text = "Booster"
 PageTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -173,8 +185,8 @@ PageTitle.Parent = MainFrame
 local BoosterButton = Instance.new("TextButton")
 BoosterButton.Name = "BoosterButton"
 BoosterButton.Size = UDim2.new(1, -30, 0, 55)
-BoosterButton.Position = UDim2.fromOffset(15, 115)
-BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+BoosterButton.Position = UDim2.new(0, 15, 0, 120)
+BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 BoosterButton.BackgroundTransparency = 0.35
 BoosterButton.BorderSizePixel = 0
 BoosterButton.Text = "FPS BOOSTER : OFF"
@@ -194,12 +206,12 @@ BoosterCorner.Parent = BoosterButton
 local RestoreButton = Instance.new("TextButton")
 RestoreButton.Name = "RestoreButton"
 RestoreButton.Size = UDim2.new(1, -30, 0, 45)
-RestoreButton.Position = UDim2.fromOffset(15, 180)
-RestoreButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+RestoreButton.Position = UDim2.new(0, 15, 0, 185)
+RestoreButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 RestoreButton.BackgroundTransparency = 0.35
 RestoreButton.BorderSizePixel = 0
 RestoreButton.Text = "RESTORE ORIGINAL"
-RestoreButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+RestoreButton.TextColor3 = Color3.fromRGB(220, 220, 220)
 RestoreButton.TextSize = 14
 RestoreButton.Font = Enum.Font.GothamBold
 RestoreButton.Parent = MainFrame
@@ -209,12 +221,12 @@ RestoreCorner.CornerRadius = UDim.new(0, 10)
 RestoreCorner.Parent = RestoreButton
 
 --==================================================
--- SAVE ORIGINAL SETTINGS
+-- ORIGINAL SETTINGS STORAGE
 --==================================================
 
-local SavedParts = {}
-local SavedEffects = {}
-local SavedTextures = {}
+local OriginalParts = {}
+local OriginalEffects = {}
+local OriginalTextures = {}
 
 local BoosterEnabled = false
 
@@ -224,133 +236,103 @@ local BoosterEnabled = false
 
 local function SavePart(part)
 
-	if SavedParts[part] then
-		return
+	if not OriginalParts[part] then
+
+		OriginalParts[part] = {
+			Material = part.Material,
+			CastShadow = part.CastShadow
+		}
+
 	end
 
-	SavedParts[part] = {
-		Material = part.Material,
-		CastShadow = part.CastShadow
-	}
 end
 
 --==================================================
 -- SAVE EFFECT
 --==================================================
 
-local function SaveEffect(effect)
+local function SaveEffect(object)
 
-	if SavedEffects[effect] then
-		return
+	if object:IsA("PostEffect")
+		or object:IsA("ParticleEmitter")
+		or object:IsA("Trail")
+		or object:IsA("Beam") then
+
+		if OriginalEffects[object] == nil then
+			OriginalEffects[object] = object.Enabled
+		end
+
 	end
 
-	if effect:IsA("BloomEffect")
-		or effect:IsA("BlurEffect")
-		or effect:IsA("SunRaysEffect")
-		or effect:IsA("ColorCorrectionEffect")
-		or effect:IsA("DepthOfFieldEffect")
-		or effect:IsA("ParticleEmitter")
-		or effect:IsA("Trail")
-		or effect:IsA("Beam") then
-
-		SavedEffects[effect] = {
-			Enabled = effect.Enabled
-		}
-	end
 end
 
 --==================================================
--- SAVE TEXTURE / DECAL
+-- SAVE TEXTURE
 --==================================================
 
 local function SaveTexture(object)
 
-	if SavedTextures[object] then
-		return
-	end
-
 	if object:IsA("Decal") or object:IsA("Texture") then
 
-		SavedTextures[object] = {
-			Transparency = object.Transparency
-		}
+		if OriginalTextures[object] == nil then
+			OriginalTextures[object] = object.Transparency
+		end
+
 	end
+
 end
 
 --==================================================
--- BOOST PART
+-- APPLY BOOST
 --==================================================
 
-local function BoostObject(object)
+local function ApplyBoost()
 
-	-- Parts
-	if object:IsA("BasePart") then
+	for _, object in ipairs(workspace:GetDescendants()) do
 
-		SavePart(object)
+		if object:IsA("BasePart") then
 
-		-- Flat material
-		object.Material = Enum.Material.SmoothPlastic
+			SavePart(object)
 
-		-- Disable shadows
-		object.CastShadow = false
+			object.Material = Enum.Material.SmoothPlastic
+			object.CastShadow = false
+
+		elseif object:IsA("PostEffect")
+			or object:IsA("ParticleEmitter")
+			or object:IsA("Trail")
+			or object:IsA("Beam") then
+
+			SaveEffect(object)
+
+			object.Enabled = false
+
+		elseif object:IsA("Decal")
+			or object:IsA("Texture") then
+
+			SaveTexture(object)
+
+			object.Transparency = 1
+
+		end
+
 	end
 
-	-- Effects
-	if object:IsA("ParticleEmitter")
-		or object:IsA("Trail")
-		or object:IsA("Beam") then
-
-		SaveEffect(object)
-
-		object.Enabled = false
-	end
-
-	-- Decals / Textures
-	if object:IsA("Decal") or object:IsA("Texture") then
-
-		SaveTexture(object)
-
-		object.Transparency = 1
-	end
-
-	-- Lighting Effects
-	if object:IsA("BloomEffect")
-		or object:IsA("BlurEffect")
-		or object:IsA("SunRaysEffect")
-		or object:IsA("ColorCorrectionEffect")
-		or object:IsA("DepthOfFieldEffect") then
-
-		SaveEffect(object)
-
-		object.Enabled = false
-	end
-end
-
---==================================================
--- ENABLE BOOSTER
---==================================================
-
-local function EnableBooster()
-
-	if BoosterEnabled then
-		return
-	end
-
-	BoosterEnabled = true
-
-	-- Workspace
-	for _, object in ipairs(Workspace:GetDescendants()) do
-		BoostObject(object)
-	end
-
-	-- Lighting
+	-- Lighting effects
 	for _, object in ipairs(Lighting:GetDescendants()) do
-		BoostObject(object)
+
+		if object:IsA("PostEffect")
+			or object:IsA("ParticleEmitter")
+			or object:IsA("Trail")
+			or object:IsA("Beam") then
+
+			SaveEffect(object)
+
+			object.Enabled = false
+
+		end
+
 	end
 
-	BoosterButton.Text = "FPS BOOSTER : ON"
-	BoosterButton.BackgroundColor3 = Color3.fromRGB(35, 150, 75)
-	BoosterButton.BackgroundTransparency = 0.35
 end
 
 --==================================================
@@ -359,120 +341,139 @@ end
 
 local function RestoreOriginal()
 
-	-- Restore Parts
-	for object, data in pairs(SavedParts) do
+	for part, data in pairs(OriginalParts) do
 
-		if object and object.Parent then
+		if part and part.Parent then
 
-			object.Material = data.Material
-			object.CastShadow = data.CastShadow
+			part.Material = data.Material
+			part.CastShadow = data.CastShadow
+
 		end
+
 	end
 
-	-- Restore Effects
-	for object, data in pairs(SavedEffects) do
+	for object, enabled in pairs(OriginalEffects) do
 
 		if object and object.Parent then
-
-			object.Enabled = data.Enabled
+			object.Enabled = enabled
 		end
+
 	end
 
-	-- Restore Textures
-	for object, data in pairs(SavedTextures) do
+	for object, transparency in pairs(OriginalTextures) do
 
 		if object and object.Parent then
-
-			object.Transparency = data.Transparency
+			object.Transparency = transparency
 		end
+
 	end
 
-	BoosterEnabled = false
-
-	BoosterButton.Text = "FPS BOOSTER : OFF"
-	BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-	BoosterButton.BackgroundTransparency = 0.35
 end
 
 --==================================================
--- BOOSTER BUTTON CLICK
+-- BOOSTER ON/OFF
 --==================================================
 
 BoosterButton.Activated:Connect(function()
 
+	BoosterEnabled = not BoosterEnabled
+
 	if BoosterEnabled then
-		RestoreOriginal()
+
+		BoosterButton.Text = "FPS BOOSTER : ON"
+		BoosterButton.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+
+		ApplyBoost()
+
 	else
-		EnableBooster()
+
+		BoosterButton.Text = "FPS BOOSTER : OFF"
+		BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+
+		RestoreOriginal()
+
 	end
+
 end)
 
 --==================================================
--- RESTORE BUTTON CLICK
+-- RESTORE BUTTON
 --==================================================
 
 RestoreButton.Activated:Connect(function()
+
+	BoosterEnabled = false
+
+	BoosterButton.Text = "FPS BOOSTER : OFF"
+	BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+
 	RestoreOriginal()
+
 end)
 
 --==================================================
--- NEW OBJECT OPTIMIZATION
+-- OPTIMIZE NEW OBJECTS
 --==================================================
 
-Workspace.DescendantAdded:Connect(function(object)
+workspace.DescendantAdded:Connect(function(object)
 
-	if BoosterEnabled then
-
-		task.wait()
-
-		if object and object.Parent then
-			BoostObject(object)
-		end
+	if not BoosterEnabled then
+		return
 	end
-end)
 
-Lighting.DescendantAdded:Connect(function(object)
+	task.wait()
 
-	if BoosterEnabled then
+	if object:IsA("BasePart") then
 
-		task.wait()
+		SavePart(object)
 
-		if object and object.Parent then
-			BoostObject(object)
-		end
+		object.Material = Enum.Material.SmoothPlastic
+		object.CastShadow = false
+
+	elseif object:IsA("PostEffect")
+		or object:IsA("ParticleEmitter")
+		or object:IsA("Trail")
+		or object:IsA("Beam") then
+
+		SaveEffect(object)
+
+		object.Enabled = false
+
+	elseif object:IsA("Decal")
+		or object:IsA("Texture") then
+
+		SaveTexture(object)
+
+		object.Transparency = 1
+
 	end
+
 end)
 
 --==================================================
--- SMALL OPEN / CLOSE BUTTON
+-- FLOATING OPEN / CLOSE BUTTON
 --==================================================
 
 local FloatingButton = Instance.new("ImageButton")
 FloatingButton.Name = "OpenCloseButton"
+FloatingButton.Size = UDim2.new(0, 50, 0, 50)
+FloatingButton.Position = UDim2.new(0.5, -25, 0.5, 145)
+FloatingButton.BackgroundTransparency = 1
+FloatingButton.Image = BUTTON_LOGO_ID
+FloatingButton.ZIndex = 1000
 FloatingButton.Parent = ScreenGui
 
--- Small size
-FloatingButton.Size = UDim2.fromOffset(50, 50)
-
-FloatingButton.AnchorPoint = Vector2.new(0.5, 0.5)
-FloatingButton.Position = UDim2.new(0.5, 0, 0.5, 0)
-
-FloatingButton.BackgroundTransparency = 1
-
--- Your image
-FloatingButton.Image = BUTTON_IMAGE_ID
-
-FloatingButton.ScaleType = Enum.ScaleType.Fit
-FloatingButton.AutoButtonColor = false
-FloatingButton.ZIndex = 1000
+local FloatingCorner = Instance.new("UICorner")
+FloatingCorner.CornerRadius = UDim.new(1, 0)
+FloatingCorner.Parent = FloatingButton
 
 --==================================================
--- DRAG OPEN / CLOSE BUTTON
+-- DRAG FLOATING BUTTON
 --==================================================
 
 local draggingButton = false
-local buttonDragStart
-local buttonStartPos
+local dragStartButton
+local startPosButton
 
 FloatingButton.InputBegan:Connect(function(input)
 
@@ -480,36 +481,74 @@ FloatingButton.InputBegan:Connect(function(input)
 		or input.UserInputType == Enum.UserInputType.Touch then
 
 		draggingButton = true
-		buttonDragStart = input.Position
-		buttonStartPos = FloatingButton.Position
+		dragStartButton = input.Position
+		startPosButton = FloatingButton.Position
 
-		input.Changed:Connect(function()
-
-			if input.UserInputState == Enum.UserInputState.End then
-				draggingButton = false
-			end
-		end)
 	end
+
 end)
 
-UserInputService.InputChanged:Connect(function(input)
+FloatingButton.InputEnded:Connect(function(input)
 
-	if not draggingButton then
-		return
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		draggingButton = false
+
 	end
+
+end)
+
+FloatingButton.InputChanged:Connect(function(input)
 
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local delta = input.Position - buttonDragStart
+		local dragInput = input
 
-		FloatingButton.Position = UDim2.new(
-			buttonStartPos.X.Scale,
-			buttonStartPos.X.Offset + delta.X,
-			buttonStartPos.Y.Scale,
-			buttonStartPos.Y.Offset + delta.Y
-		)
+		dragInput.Changed:Connect(function()
+
+			if dragInput.UserInputState == Enum.UserInputState.End then
+				draggingButton = false
+			end
+
+		end)
+
+		local connection
+
+		connection = RunService.RenderStepped:Connect(function()
+
+			if not draggingButton then
+
+				connection:Disconnect()
+				return
+
+			end
+
+			local delta = dragInput.Position - dragStartButton
+
+			FloatingButton.Position = UDim2.new(
+				startPosButton.X.Scale,
+				startPosButton.X.Offset + delta.X,
+				startPosButton.Y.Scale,
+				startPosButton.Y.Offset + delta.Y
+			)
+
+		end)
+
 	end
+
+end)
+
+--==================================================
+-- ROTATING OPEN / CLOSE BUTTON
+--==================================================
+
+RunService.RenderStepped:Connect(function(deltaTime)
+
+	FloatingButton.Rotation =
+		(FloatingButton.Rotation + rotationSpeed * deltaTime) % 360
+
 end)
 
 --==================================================
