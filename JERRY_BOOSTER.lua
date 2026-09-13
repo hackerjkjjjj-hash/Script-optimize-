@@ -187,7 +187,7 @@ BoosterButton.Name = "BoosterButton"
 BoosterButton.Size = UDim2.new(1, -30, 0, 55)
 BoosterButton.Position = UDim2.new(0, 15, 0, 120)
 BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-BoosterButton.BackgroundTransparency = 0.35
+BoosterButton.BackgroundTransparency = 0.25
 BoosterButton.BorderSizePixel = 0
 BoosterButton.Text = "FPS BOOSTER : OFF"
 BoosterButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -208,7 +208,7 @@ RestoreButton.Name = "RestoreButton"
 RestoreButton.Size = UDim2.new(1, -30, 0, 45)
 RestoreButton.Position = UDim2.new(0, 15, 0, 185)
 RestoreButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-RestoreButton.BackgroundTransparency = 0.35
+RestoreButton.BackgroundTransparency = 0.25
 RestoreButton.BorderSizePixel = 0
 RestoreButton.Text = "RESTORE ORIGINAL"
 RestoreButton.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -382,6 +382,7 @@ BoosterButton.Activated:Connect(function()
 
 		BoosterButton.Text = "FPS BOOSTER : ON"
 		BoosterButton.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
+		BoosterButton.BackgroundTransparency = 0.25
 
 		ApplyBoost()
 
@@ -389,6 +390,7 @@ BoosterButton.Activated:Connect(function()
 
 		BoosterButton.Text = "FPS BOOSTER : OFF"
 		BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+		BoosterButton.BackgroundTransparency = 0.25
 
 		RestoreOriginal()
 
@@ -406,6 +408,7 @@ RestoreButton.Activated:Connect(function()
 
 	BoosterButton.Text = "FPS BOOSTER : OFF"
 	BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+	BoosterButton.BackgroundTransparency = 0.25
 
 	RestoreOriginal()
 
@@ -470,7 +473,7 @@ FloatingButton.Parent = ScreenGui
 -- FIX MAIN FRAME TRANSPARENCY
 --==================================================
 
-MainFrame.BackgroundTransparency = 0
+MainFrame.BackgroundTransparency = 0.20
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 
 --==================================================
@@ -554,12 +557,6 @@ end)
 --==================================================
 -- OPEN / CLOSE
 --==================================================
-
-FloatingButton.Activated:Connect(function()
-
-	MainFrame.Visible = not MainFrame.Visible
-
-end)
 
 FloatingButton.Activated:Connect(function()
 
