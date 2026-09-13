@@ -456,44 +456,53 @@ end)
 
 local FloatingButton = Instance.new("ImageButton")
 FloatingButton.Name = "OpenCloseButton"
-FloatingButton.Size = UDim2.new(0, 50, 0, 50)
-FloatingButton.Position = UDim2.new(0.5, -25, 0.5, 145)
+FloatingButton.Size = UDim2.fromOffset(58, 58)
+FloatingButton.Position = UDim2.new(0.5, -29, 0.5, 145)
+
+-- Button itself is transparent, only the image is visible
 FloatingButton.BackgroundTransparency = 1
-FloatingButton.Image = BUTTON_LOGO_ID
+FloatingButton.Image = "rbxassetid://127978764819014"
+FloatingButton.AutoButtonColor = false
 FloatingButton.ZIndex = 1000
 FloatingButton.Parent = ScreenGui
 
-local FloatingCorner = Instance.new("UICorner")
-FloatingCorner.CornerRadius = UDim.new(1, 0)
-FloatingCorner.Parent = FloatingButton
-
 --==================================================
--- DRAG FLOATING BUTTON
+-- FIX MAIN FRAME TRANSPARENCY
 --==================================================
 
-local draggingButton = false
-local dragStartButton
-local startPosButton
+MainFrame.BackgroundTransparency = 0
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+
+--==================================================
+-- SMOOTH DRAG SYSTEM
+--==================================================
+
+local dragging = false
+local dragStart
+local startPosition
+local dragInput
+
+local function updateDrag(input)
+
+	local delta = input.Position - dragStart
+
+	FloatingButton.Position = UDim2.new(
+		startPosition.X.Scale,
+		startPosition.X.Offset + delta.X,
+		startPosition.Y.Scale,
+		startPosition.Y.Offset + delta.Y
+	)
+
+end
 
 FloatingButton.InputBegan:Connect(function(input)
 
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		draggingButton = true
-		dragStartButton = input.Position
-		startPosButton = FloatingButton.Position
-
-	end
-
-end)
-
-FloatingButton.InputEnded:Connect(function(input)
-
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-
-		draggingButton = false
+		dragging = true
+		dragStart = input.Position
+		startPosition = FloatingButton.Position
 
 	end
 
@@ -504,45 +513,36 @@ FloatingButton.InputChanged:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local dragInput = input
+		dragInput = input
 
-		dragInput.Changed:Connect(function()
+	end
 
-			if dragInput.UserInputState == Enum.UserInputState.End then
-				draggingButton = false
-			end
+end)
 
-		end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
 
-		local connection
+	if input == dragInput and dragging then
+		updateDrag(input)
+	end
 
-		connection = RunService.RenderStepped:Connect(function()
+end)
 
-			if not draggingButton then
+FloatingButton.InputEnded:Connect(function(input)
 
-				connection:Disconnect()
-				return
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
 
-			end
-
-			local delta = dragInput.Position - dragStartButton
-
-			FloatingButton.Position = UDim2.new(
-				startPosButton.X.Scale,
-				startPosButton.X.Offset + delta.X,
-				startPosButton.Y.Scale,
-				startPosButton.Y.Offset + delta.Y
-			)
-
-		end)
+		dragging = false
 
 	end
 
 end)
 
 --==================================================
--- ROTATING OPEN / CLOSE BUTTON
+-- ROTATION
 --==================================================
+
+local rotationSpeed = 90
 
 RunService.RenderStepped:Connect(function(deltaTime)
 
@@ -552,8 +552,14 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 --==================================================
--- OPEN / CLOSE MAIN FRAME
+-- OPEN / CLOSE
 --==================================================
+
+FloatingButton.Activated:Connect(function()
+
+	MainFrame.Visible = not MainFrame.Visible
+
+end)
 
 FloatingButton.Activated:Connect(function()
 
