@@ -1,6 +1,6 @@
 --// JERRY FPS BOOSTER
 --// Roblox Studio LocalScript
---// StarterPlayer > StarterPlayerScripts
+--// Place in StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
@@ -40,7 +40,7 @@ Main.Name = "Main"
 Main.Size = UDim2.new(0, 330, 0, 260)
 Main.Position = UDim2.new(0.5, -165, 0.5, -130)
 
--- ថ្លា 15%
+-- Main ថ្លា 15%
 Main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 Main.BackgroundTransparency = 0.15
 
@@ -65,7 +65,7 @@ local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 58)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 
--- ថ្លា 10%
+-- TopBar ថ្លា 10%
 TopBar.BackgroundTransparency = 0.10
 
 TopBar.BorderSizePixel = 0
@@ -75,6 +75,10 @@ local TopCorner = Instance.new("UICorner")
 TopCorner.CornerRadius = UDim.new(0, 14)
 TopCorner.Parent = TopBar
 
+--==================================================
+-- LOGO
+--==================================================
+
 local Logo = Instance.new("ImageLabel")
 Logo.Size = UDim2.new(0, 42, 0, 42)
 Logo.Position = UDim2.new(0, 9, 0.5, -21)
@@ -82,12 +86,16 @@ Logo.BackgroundTransparency = 1
 Logo.Image = LOGO_ID
 Logo.Parent = TopBar
 
+--==================================================
+-- TITLE
+--==================================================
+
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -70, 0, 30)
 Title.Position = UDim2.new(0, 60, 0, 8)
 Title.BackgroundTransparency = 1
 Title.Text = "FPS BOOSTER"
-Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -98,14 +106,14 @@ Subtitle.Size = UDim2.new(1, -70, 0, 18)
 Subtitle.Position = UDim2.new(0, 60, 0, 33)
 Subtitle.BackgroundTransparency = 1
 Subtitle.Text = "Low Graphics • Smooth Mode"
-Subtitle.TextColor3 = Color3.fromRGB(160,160,165)
+Subtitle.TextColor3 = Color3.fromRGB(160, 160, 165)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = TopBar
 
 --==================================================
--- DRAG MAIN
+-- DRAG MAIN FRAME
 --==================================================
 
 local draggingMain = false
@@ -164,52 +172,60 @@ PageTitle.Size = UDim2.new(1, -30, 0, 30)
 PageTitle.Position = UDim2.new(0, 15, 0, 72)
 PageTitle.BackgroundTransparency = 1
 PageTitle.Text = "Booster"
-PageTitle.TextColor3 = Color3.fromRGB(255,255,255)
+PageTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 PageTitle.TextSize = 20
 PageTitle.Font = Enum.Font.GothamBold
 PageTitle.TextXAlignment = Enum.TextXAlignment.Left
 PageTitle.Parent = Main
 
 --==================================================
--- BOOSTER BUTTON
+-- FPS BOOSTER BUTTON
 --==================================================
 
 local BoosterButton = Instance.new("TextButton")
 BoosterButton.Size = UDim2.new(1, -30, 0, 55)
 BoosterButton.Position = UDim2.new(0, 15, 0, 112)
-BoosterButton.BackgroundColor3 = Color3.fromRGB(40,40,46)
-BoosterButton.BackgroundTransparency = 0.05
+
+BoosterButton.BackgroundColor3 = Color3.fromRGB(40, 40, 46)
+
+-- Button ថ្លា 35%
+BoosterButton.BackgroundTransparency = 0.35
+
 BoosterButton.BorderSizePixel = 0
 BoosterButton.Text = "FPS BOOSTER : OFF"
-BoosterButton.TextColor3 = Color3.fromRGB(255,255,255)
+BoosterButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BoosterButton.TextSize = 16
 BoosterButton.Font = Enum.Font.GothamBold
 BoosterButton.AutoButtonColor = false
 BoosterButton.Parent = Main
 
 local BoosterCorner = Instance.new("UICorner")
-BoosterCorner.CornerRadius = UDim.new(0,10)
+BoosterCorner.CornerRadius = UDim.new(0, 10)
 BoosterCorner.Parent = BoosterButton
 
 --==================================================
--- RESTORE
+-- RESTORE BUTTON
 --==================================================
 
 local RestoreButton = Instance.new("TextButton")
 RestoreButton.Size = UDim2.new(1, -30, 0, 45)
-RestoreButton.Position = UDim2.new(0,15,0,178)
-RestoreButton.BackgroundColor3 = Color3.fromRGB(32,32,37)
-RestoreButton.BackgroundTransparency = 0.05
+RestoreButton.Position = UDim2.new(0, 15, 0, 178)
+
+RestoreButton.BackgroundColor3 = Color3.fromRGB(32, 32, 37)
+
+-- Restore ថ្លា 35%
+RestoreButton.BackgroundTransparency = 0.35
+
 RestoreButton.BorderSizePixel = 0
 RestoreButton.Text = "RESTORE ORIGINAL"
-RestoreButton.TextColor3 = Color3.fromRGB(210,210,215)
+RestoreButton.TextColor3 = Color3.fromRGB(210, 210, 215)
 RestoreButton.TextSize = 14
 RestoreButton.Font = Enum.Font.GothamBold
 RestoreButton.AutoButtonColor = false
 RestoreButton.Parent = Main
 
 local RestoreCorner = Instance.new("UICorner")
-RestoreCorner.CornerRadius = UDim.new(0,10)
+RestoreCorner.CornerRadius = UDim.new(0, 10)
 RestoreCorner.Parent = RestoreButton
 
 --==================================================
@@ -218,10 +234,13 @@ RestoreCorner.Parent = RestoreButton
 
 local FloatingButton = Instance.new("ImageButton")
 FloatingButton.Name = "FloatingOpenButton"
-FloatingButton.Size = UDim2.new(0,50,0,50)
-FloatingButton.Position = UDim2.new(1,-70,0.5,-25)
+FloatingButton.Size = UDim2.new(0, 50, 0, 50)
 
-FloatingButton.BackgroundColor3 = Color3.fromRGB(20,20,24)
+-- ចាប់ផ្តើមនៅកណ្ដាល Screen
+FloatingButton.AnchorPoint = Vector2.new(0.5, 0.5)
+FloatingButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+
+FloatingButton.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 FloatingButton.BackgroundTransparency = 0.15
 FloatingButton.BorderSizePixel = 0
 FloatingButton.Image = LOGO_ID
@@ -229,7 +248,7 @@ FloatingButton.ZIndex = 1000
 FloatingButton.Parent = ScreenGui
 
 local FloatCorner = Instance.new("UICorner")
-FloatCorner.CornerRadius = UDim.new(1,0)
+FloatCorner.CornerRadius = UDim.new(1, 0)
 FloatCorner.Parent = FloatingButton
 
 local FloatStroke = Instance.new("UIStroke")
@@ -295,7 +314,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 --==================================================
--- OPEN / CLOSE
+-- OPEN / CLOSE MAIN
 --==================================================
 
 FloatingButton.Activated:Connect(function()
@@ -318,10 +337,12 @@ local function OptimizeObject(obj)
 	if obj:IsA("BasePart") then
 
 		if not SavedParts[obj] then
+
 			SavedParts[obj] = {
 				Material = obj.Material,
 				CastShadow = obj.CastShadow
 			}
+
 		end
 
 		obj.Material = Enum.Material.SmoothPlastic
@@ -334,9 +355,11 @@ local function OptimizeObject(obj)
 		or obj:IsA("Beam") then
 
 		if not SavedEffects[obj] then
+
 			SavedEffects[obj] = {
 				Enabled = obj.Enabled
 			}
+
 		end
 
 		obj.Enabled = false
@@ -350,9 +373,11 @@ local function OptimizeObject(obj)
 		or obj:IsA("DepthOfFieldEffect") then
 
 		if not SavedEffects[obj] then
+
 			SavedEffects[obj] = {
 				Enabled = obj.Enabled
 			}
+
 		end
 
 		obj.Enabled = false
@@ -362,14 +387,17 @@ local function OptimizeObject(obj)
 	if obj:IsA("Decal") or obj:IsA("Texture") then
 
 		if not SavedTextures[obj] then
+
 			SavedTextures[obj] = {
 				Transparency = obj.Transparency
 			}
+
 		end
 
 		obj.Transparency = 1
 
 	end
+
 end
 
 --==================================================
@@ -389,7 +417,11 @@ local function EnableBooster()
 	end
 
 	BoosterButton.Text = "FPS BOOSTER : ON"
-	BoosterButton.BackgroundColor3 = Color3.fromRGB(45,130,75)
+
+	BoosterButton.BackgroundColor3 =
+		Color3.fromRGB(45, 130, 75)
+
+	BoosterButton.BackgroundTransparency = 0.35
 
 end
 
@@ -401,16 +433,18 @@ local function RestoreOriginal()
 
 	BoosterEnabled = false
 
-	for obj,data in pairs(SavedParts) do
+	for obj, data in pairs(SavedParts) do
 
 		if obj and obj.Parent then
+
 			obj.Material = data.Material
 			obj.CastShadow = data.CastShadow
+
 		end
 
 	end
 
-	for obj,data in pairs(SavedEffects) do
+	for obj, data in pairs(SavedEffects) do
 
 		if obj and obj.Parent then
 			obj.Enabled = data.Enabled
@@ -418,7 +452,7 @@ local function RestoreOriginal()
 
 	end
 
-	for obj,data in pairs(SavedTextures) do
+	for obj, data in pairs(SavedTextures) do
 
 		if obj and obj.Parent then
 			obj.Transparency = data.Transparency
@@ -427,7 +461,11 @@ local function RestoreOriginal()
 	end
 
 	BoosterButton.Text = "FPS BOOSTER : OFF"
-	BoosterButton.BackgroundColor3 = Color3.fromRGB(40,40,46)
+
+	BoosterButton.BackgroundColor3 =
+		Color3.fromRGB(40, 40, 46)
+
+	BoosterButton.BackgroundTransparency = 0.35
 
 end
 
@@ -438,9 +476,11 @@ end
 Workspace.DescendantAdded:Connect(function(obj)
 
 	if BoosterEnabled then
+
 		task.defer(function()
 			OptimizeObject(obj)
 		end)
+
 	end
 
 end)
@@ -448,15 +488,17 @@ end)
 Lighting.DescendantAdded:Connect(function(obj)
 
 	if BoosterEnabled then
+
 		task.defer(function()
 			OptimizeObject(obj)
 		end)
+
 	end
 
 end)
 
 --==================================================
--- BUTTONS
+-- BUTTON EVENTS
 --==================================================
 
 BoosterButton.Activated:Connect(function()
