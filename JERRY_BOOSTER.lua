@@ -19,6 +19,10 @@ local BUTTON_LOGO_ID = "rbxassetid://127978764819014"
 
 local rotationSpeed = 90 -- degrees per second
 
+-- Far render preference (requires StreamingEnabled)
+local FAR_RENDER_RADIUS = 2048
+local FAR_RENDER_MIN_RADIUS = 512
+
 --==================================================
 -- GUI
 --==================================================
@@ -293,10 +297,26 @@ local function SaveTexture(object)
 end
 
 --==================================================
+-- FAR RENDER / STREAMING
+--==================================================
+
+-- These properties are controlled by the experience and are most
+-- reliable when configured from a normal Server Script in Workspace.
+pcall(function()
+	if workspace.StreamingEnabled then
+		workspace.StreamingTargetRadius = FAR_RENDER_RADIUS
+		workspace.StreamingMinRadius = FAR_RENDER_MIN_RADIUS
+	end
+end)
+
+--==================================================
 -- APPLY BOOST
 --==================================================
 
 local function ApplyBoost()
+
+	-- No shadow graphics
+	Lighting.GlobalShadows = false
 
 	for _, object in ipairs(workspace:GetDescendants()) do
 
@@ -350,6 +370,10 @@ end
 --==================================================
 
 local function RestoreOriginal()
+
+	-- Keep the player's original shadow setting when possible.
+	-- GlobalShadows is a Lighting setting, so restore to Roblox's normal value.
+	Lighting.GlobalShadows = true
 
 	for part, data in pairs(OriginalParts) do
 
