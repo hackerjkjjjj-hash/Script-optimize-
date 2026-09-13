@@ -461,7 +461,7 @@ end)
 local FloatingButton = Instance.new("ImageButton")
 FloatingButton.Name = "OpenCloseButton"
 FloatingButton.Size = UDim2.fromOffset(58, 58)
-FloatingButton.Position = UDim2.new(0.5, -29, 0.5, 145)
+FloatingButton.Position = UDim2.new(0.5, -29, 0.5, -29)
 
 -- Button itself is transparent, only the image is visible
 FloatingButton.BackgroundTransparency = 1
