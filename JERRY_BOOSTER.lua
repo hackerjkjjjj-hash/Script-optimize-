@@ -48,7 +48,7 @@ ScreenGui.Parent = PlayerGui
 
 
 --==================================================
--- WELCOME MESSAGE
+-- WELCOME MESSAGE (FIXED)
 --==================================================
 
 local Welcome = Instance.new("TextLabel")
@@ -65,7 +65,8 @@ Welcome.TextSize = 26
 Welcome.Font = Enum.Font.GothamBold
 Welcome.TextXAlignment = Enum.TextXAlignment.Center
 Welcome.TextYAlignment = Enum.TextYAlignment.Center
-Welcome.ZIndex = 2000
+Welcome.ZIndex = 100 -- កែសម្រួល ZIndex មកត្រឹម 100 ដើម្បីកុំឱ្យបាំង Button
+Welcome.Active = false -- បិទ Active ដើម្បីកុំឱ្យវាទប់ Blocking ការ Click/Touch
 Welcome.Parent = ScreenGui
 
 local WelcomeCorner = Instance.new("UICorner")
@@ -102,7 +103,8 @@ task.delay(4, function()
 	if Welcome and Welcome.Parent then
 		local fadeTween = TweenService:Create(Welcome, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			Size = UDim2.fromOffset(0, 0),
-			TextTransparency = 1
+			TextTransparency = 1,
+			BackgroundTransparency = 1
 		})
 		fadeTween:Play()
 		fadeTween.Completed:Connect(function()
