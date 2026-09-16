@@ -207,7 +207,7 @@ Title.Name = "Title"
 Title.Size = UDim2.new(1, -70, 0, 30)
 Title.Position = UDim2.new(0, 65, 0, 8)
 Title.BackgroundTransparency = 1
-Title.Text = "FPS BOOSTER"
+Title.Text = "JERRY RENDER"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
@@ -220,7 +220,7 @@ Subtitle.Name = "Subtitle"
 Subtitle.Size = UDim2.new(1, -70, 0, 20)
 Subtitle.Position = UDim2.new(0, 65, 0, 37)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Low Graphics • Smooth Mode"
+Subtitle.Text = "Far Map Render • Smooth Mode"
 Subtitle.TextColor3 = Color3.fromRGB(160, 160, 160)
 Subtitle.TextSize = 12
 Subtitle.Font = Enum.Font.Gotham
@@ -309,7 +309,7 @@ PageTitle.TextXAlignment = Enum.TextXAlignment.Left
 PageTitle.Parent = MainFrame
 
 --==================================================
--- BOOSTER BUTTON (with status dot + animated stroke)
+-- RENDER MAP BUTTON (with status dot + animated stroke)
 --==================================================
 
 local BoosterButton = Instance.new("TextButton")
@@ -319,7 +319,7 @@ BoosterButton.Position = UDim2.new(0, 15, 0, 120)
 BoosterButton.BackgroundColor3 = COLOR_OFF
 BoosterButton.BackgroundTransparency = 0.45
 BoosterButton.BorderSizePixel = 0
-BoosterButton.Text = "  FPS BOOSTER : OFF"
+BoosterButton.Text = "  RENDER MAP : OFF"
 BoosterButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BoosterButton.TextSize = 16
 BoosterButton.Font = Enum.Font.GothamBold
@@ -360,7 +360,7 @@ RestoreButton.Position = UDim2.new(0, 15, 0, 185)
 RestoreButton.BackgroundColor3 = COLOR_OFF
 RestoreButton.BackgroundTransparency = 0.45
 RestoreButton.BorderSizePixel = 0
-RestoreButton.Text = "RESTORE ORIGINAL"
+RestoreButton.Text = "RESTORE RENDER"
 RestoreButton.TextColor3 = Color3.fromRGB(220, 220, 220)
 RestoreButton.TextSize = 14
 RestoreButton.Font = Enum.Font.GothamBold
@@ -416,274 +416,51 @@ AttachHover(BoosterButton, 0.3, 0.45)
 AttachHover(RestoreButton, 0.3, 0.45)
 
 --==================================================
--- ORIGINAL SETTINGS STORAGE
+-- RENDER MAP ONLY
 --==================================================
-
-local OriginalParts = {}
-local OriginalEffects = {}
-local OriginalTextures = {}
-local OriginalSurfaceAppearances = {}
-local SurfaceStorage = Instance.new("Folder")
-SurfaceStorage.Name = "_JerrySurfaceStorage"
-SurfaceStorage.Parent = nil
 
 local BoosterEnabled = false
-local OriginalGlobalShadows = Lighting.GlobalShadows
-local OriginalTechnology = Lighting.Technology
-local OriginalAtmosphereDensity = nil
-local OriginalFogEnd = workspace.FogEnd
-local OriginalTerrainDecoration = workspace.Terrain.Decoration
-local OriginalWaterReflectance = workspace.Terrain.WaterReflectance
-local OriginalWaterWaveSize = workspace.Terrain.WaterWaveSize
-local OriginalMeshFidelity = {}
 
---==================================================
--- SAVE PART
---==================================================
+local OriginalStreamingEnabled
+local OriginalStreamingTargetRadius
+local OriginalStreamingMinRadius
 
-local function SavePart(part)
-
-	if not OriginalParts[part] then
-
-		OriginalParts[part] = {
-			Material = part.Material,
-			CastShadow = part.CastShadow
-		}
-
-	end
-
-end
-
---==================================================
--- SAVE EFFECT
---==================================================
-
-local function SaveEffect(object)
-
-	if object:IsA("PostEffect")
-		or object:IsA("ParticleEmitter")
-		or object:IsA("Trail")
-		or object:IsA("Beam") then
-
-		if OriginalEffects[object] == nil then
-			OriginalEffects[object] = object.Enabled
-		end
-
-	end
-
-end
-
---==================================================
--- SAVE TEXTURE
---==================================================
-
-local function SaveTexture(object)
-
-	if object:IsA("Decal") or object:IsA("Texture") then
-
-		if OriginalTextures[object] == nil then
-			OriginalTextures[object] = object.Transparency
-		end
-
-	end
-
-end
-
---==================================================
--- FAR RENDER / STREAMING
---==================================================
-
--- These properties are controlled by the experience and are most
--- reliable when configured from a normal Server Script in Workspace.
 pcall(function()
-	if workspace.StreamingEnabled then
-		workspace.StreamingTargetRadius = FAR_RENDER_RADIUS
-		workspace.StreamingMinRadius = FAR_RENDER_MIN_RADIUS
-	end
+    OriginalStreamingEnabled = workspace.StreamingEnabled
+    OriginalStreamingTargetRadius = workspace.StreamingTargetRadius
+    OriginalStreamingMinRadius = workspace.StreamingMinRadius
 end)
 
---==================================================
--- DISABLE LIGHTING / VISUAL EFFECTS
---==================================================
+local function ApplyRenderMap()
+    -- Render/streaming only.
+    -- No Part material, shadow, reflection, texture, SurfaceAppearance,
+    -- particle, or Lighting changes are made here.
+    pcall(function()
+        if workspace.StreamingEnabled then
+            workspace.StreamingTargetRadius = FAR_RENDER_RADIUS
+            workspace.StreamingMinRadius = FAR_RENDER_MIN_RADIUS
+        end
+    end)
+end
 
-local function DisableLightingEffects()
+local function RestoreRenderMap()
+    pcall(function()
+        if OriginalStreamingTargetRadius ~= nil then
+            workspace.StreamingTargetRadius = OriginalStreamingTargetRadius
+        end
 
-	pcall(function()
-		Lighting.GlobalShadows = false
-		Lighting.Technology = Enum.Technology.Compatibility
-	end)
+        if OriginalStreamingMinRadius ~= nil then
+            workspace.StreamingMinRadius = OriginalStreamingMinRadius
+        end
 
-	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-	if atmosphere and OriginalAtmosphereDensity == nil then
-		OriginalAtmosphereDensity = atmosphere.Density
-		atmosphere.Density = 0
-	end
-
-	for _, object in ipairs(Lighting:GetDescendants()) do
-
-		if object:IsA("PostEffect")
-			or object:IsA("BloomEffect")
-			or object:IsA("BlurEffect")
-			or object:IsA("SunRaysEffect")
-			or object:IsA("ColorCorrectionEffect")
-			or object:IsA("DepthOfFieldEffect") then
-
-			SaveEffect(object)
-			object.Enabled = false
-
-		end
-
-	end
-
+        if OriginalStreamingEnabled ~= nil then
+            workspace.StreamingEnabled = OriginalStreamingEnabled
+        end
+    end)
 end
 
 --==================================================
--- APPLY BOOST
---==================================================
-
-local function ApplyBoost()
-
-	-- No shadow graphics / lighting post effects
-	DisableLightingEffects()
-
-	-- Terrain & fog cost reduction
-	pcall(function()
-		workspace.Terrain.Decoration = false
-		workspace.Terrain.WaterReflectance = 0
-		workspace.Terrain.WaterWaveSize = 0
-		workspace.FogEnd = math.max(workspace.FogEnd, 100000)
-	end)
-
-	for _, object in ipairs(workspace:GetDescendants()) do
-
-		if object:IsA("BasePart") then
-
-			SavePart(object)
-
-			object.Material = Enum.Material.SmoothPlastic
-			object.CastShadow = false
-			object.Reflectance = 0
-
-			if object:IsA("MeshPart") and OriginalMeshFidelity[object] == nil then
-				OriginalMeshFidelity[object] = object.RenderFidelity
-				object.RenderFidelity = Enum.RenderFidelity.Performance
-			end
-
-			local surface = object:FindFirstChildOfClass("SurfaceAppearance")
-			if surface and not OriginalSurfaceAppearances[surface] then
-				OriginalSurfaceAppearances[surface] = object
-				surface.Parent = SurfaceStorage
-			end
-
-		elseif object:IsA("PostEffect")
-			or object:IsA("ParticleEmitter")
-			or object:IsA("Trail")
-			or object:IsA("Beam") then
-
-			SaveEffect(object)
-
-			object.Enabled = false
-
-		elseif object:IsA("Decal")
-			or object:IsA("Texture") then
-
-			SaveTexture(object)
-
-			object.Transparency = 1
-
-		end
-
-	end
-
-	-- Lighting effects
-	for _, object in ipairs(Lighting:GetDescendants()) do
-
-		if object:IsA("PostEffect")
-			or object:IsA("ParticleEmitter")
-			or object:IsA("Trail")
-			or object:IsA("Beam") then
-
-			SaveEffect(object)
-
-			object.Enabled = false
-
-		end
-
-	end
-
-end
-
---==================================================
--- RESTORE ORIGINAL
---==================================================
-
-local function RestoreOriginal()
-
-	-- Restore the original global shadow / technology setting.
-	pcall(function()
-		Lighting.GlobalShadows = OriginalGlobalShadows
-		Lighting.Technology = OriginalTechnology
-	end)
-
-	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-	if atmosphere and OriginalAtmosphereDensity ~= nil then
-		atmosphere.Density = OriginalAtmosphereDensity
-		OriginalAtmosphereDensity = nil
-	end
-
-	pcall(function()
-		workspace.Terrain.Decoration = OriginalTerrainDecoration
-		workspace.Terrain.WaterReflectance = OriginalWaterReflectance
-		workspace.Terrain.WaterWaveSize = OriginalWaterWaveSize
-		workspace.FogEnd = OriginalFogEnd
-	end)
-
-	for part, fidelity in pairs(OriginalMeshFidelity) do
-		if part and part.Parent then
-			part.RenderFidelity = fidelity
-		end
-	end
-	OriginalMeshFidelity = {}
-
-	for part, data in pairs(OriginalParts) do
-
-		if part and part.Parent then
-
-			part.Material = data.Material
-			part.CastShadow = data.CastShadow
-
-		end
-
-	end
-
-	for object, enabled in pairs(OriginalEffects) do
-
-		if object and object.Parent then
-			object.Enabled = enabled
-		end
-
-	end
-
-	for object, transparency in pairs(OriginalTextures) do
-
-		if object and object.Parent then
-			object.Transparency = transparency
-		end
-
-	end
-
-	for surface, parentPart in pairs(OriginalSurfaceAppearances) do
-
-		if surface and parentPart and parentPart.Parent then
-			surface.Parent = parentPart
-		end
-
-	end
-
-end
-
---==================================================
--- BOOSTER ON/OFF (animated stroke + status dot pulse)
+-- RENDER MAP ON/OFF (animated stroke + status dot pulse)
 --==================================================
 
 local boosterPulseId = 0
@@ -695,7 +472,7 @@ local function SetBoosterVisual(enabled)
 
 	if enabled then
 
-		BoosterButton.Text = "  FPS BOOSTER : ON"
+		BoosterButton.Text = "  RENDER MAP : ON"
 
 		TweenService:Create(BoosterButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = COLOR_ON,
@@ -728,7 +505,7 @@ local function SetBoosterVisual(enabled)
 
 	else
 
-		BoosterButton.Text = "  FPS BOOSTER : OFF"
+		BoosterButton.Text = "  RENDER MAP : OFF"
 
 		TweenService:Create(BoosterButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = COLOR_OFF,
@@ -782,52 +559,6 @@ end)
 --==================================================
 -- OPTIMIZE NEW OBJECTS
 --==================================================
-
-workspace.DescendantAdded:Connect(function(object)
-
-	if not BoosterEnabled then
-		return
-	end
-
-	task.wait()
-
-	if object:IsA("BasePart") then
-
-		SavePart(object)
-
-		object.Material = Enum.Material.SmoothPlastic
-		object.CastShadow = false
-		object.Reflectance = 0
-
-		if object:IsA("MeshPart") and OriginalMeshFidelity[object] == nil then
-			OriginalMeshFidelity[object] = object.RenderFidelity
-			object.RenderFidelity = Enum.RenderFidelity.Performance
-		end
-
-		local surface = object:FindFirstChildOfClass("SurfaceAppearance")
-		if surface then
-			surface:Destroy()
-		end
-
-	elseif object:IsA("PostEffect")
-		or object:IsA("ParticleEmitter")
-		or object:IsA("Trail")
-		or object:IsA("Beam") then
-
-		SaveEffect(object)
-
-		object.Enabled = false
-
-	elseif object:IsA("Decal")
-		or object:IsA("Texture") then
-
-		SaveTexture(object)
-
-		object.Transparency = 1
-
-	end
-
-end)
 
 --==================================================
 -- FLOATING OPEN / CLOSE BUTTON
