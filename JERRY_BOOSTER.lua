@@ -293,6 +293,13 @@ SurfaceStorage.Parent = nil
 
 local BoosterEnabled = false
 local OriginalGlobalShadows = Lighting.GlobalShadows
+local OriginalTechnology = Lighting.Technology
+local OriginalAtmosphereDensity = nil
+local OriginalFogEnd = workspace.FogEnd
+local OriginalTerrainDecoration = workspace.Terrain.Decoration
+local OriginalWaterReflectance = workspace.Terrain.WaterReflectance
+local OriginalWaterWaveSize = workspace.Terrain.WaterWaveSize
+local OriginalMeshFidelity = {}
 
 --==================================================
 -- SAVE PART
@@ -367,7 +374,14 @@ local function DisableLightingEffects()
 
 	pcall(function()
 		Lighting.GlobalShadows = false
+		Lighting.Technology = Enum.Technology.Compatibility
 	end)
+
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmosphere and OriginalAtmosphereDensity == nil then
+		OriginalAtmosphereDensity = atmosphere.Density
+		atmosphere.Density = 0
+	end
 
 	for _, object in ipairs(Lighting:GetDescendants()) do
 
@@ -396,6 +410,14 @@ local function ApplyBoost()
 	-- No shadow graphics / lighting post effects
 	DisableLightingEffects()
 
+	-- Terrain & fog cost reduction
+	pcall(function()
+		workspace.Terrain.Decoration = false
+		workspace.Terrain.WaterReflectance = 0
+		workspace.Terrain.WaterWaveSize = 0
+		workspace.FogEnd = math.max(workspace.FogEnd, 100000)
+	end)
+
 	for _, object in ipairs(workspace:GetDescendants()) do
 
 		if object:IsA("BasePart") then
@@ -405,6 +427,11 @@ local function ApplyBoost()
 			object.Material = Enum.Material.SmoothPlastic
 			object.CastShadow = false
 			object.Reflectance = 0
+
+			if object:IsA("MeshPart") and OriginalMeshFidelity[object] == nil then
+				OriginalMeshFidelity[object] = object.RenderFidelity
+				object.RenderFidelity = Enum.RenderFidelity.Performance
+			end
 
 			local surface = object:FindFirstChildOfClass("SurfaceAppearance")
 			if surface and not OriginalSurfaceAppearances[surface] then
@@ -456,10 +483,31 @@ end
 
 local function RestoreOriginal()
 
-	-- Restore the original global shadow setting.
+	-- Restore the original global shadow / technology setting.
 	pcall(function()
 		Lighting.GlobalShadows = OriginalGlobalShadows
+		Lighting.Technology = OriginalTechnology
 	end)
+
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmosphere and OriginalAtmosphereDensity ~= nil then
+		atmosphere.Density = OriginalAtmosphereDensity
+		OriginalAtmosphereDensity = nil
+	end
+
+	pcall(function()
+		workspace.Terrain.Decoration = OriginalTerrainDecoration
+		workspace.Terrain.WaterReflectance = OriginalWaterReflectance
+		workspace.Terrain.WaterWaveSize = OriginalWaterWaveSize
+		workspace.FogEnd = OriginalFogEnd
+	end)
+
+	for part, fidelity in pairs(OriginalMeshFidelity) do
+		if part and part.Parent then
+			part.RenderFidelity = fidelity
+		end
+	end
+	OriginalMeshFidelity = {}
 
 	for part, data in pairs(OriginalParts) do
 
@@ -561,6 +609,11 @@ workspace.DescendantAdded:Connect(function(object)
 		object.Material = Enum.Material.SmoothPlastic
 		object.CastShadow = false
 		object.Reflectance = 0
+
+		if object:IsA("MeshPart") and OriginalMeshFidelity[object] == nil then
+			OriginalMeshFidelity[object] = object.RenderFidelity
+			object.RenderFidelity = Enum.RenderFidelity.Performance
+		end
 
 		local surface = object:FindFirstChildOfClass("SurfaceAppearance")
 		if surface then
