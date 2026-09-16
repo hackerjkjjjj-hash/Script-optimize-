@@ -6,6 +6,8 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -22,6 +24,16 @@ local rotationSpeed = 90 -- degrees per second
 -- Far render preference (requires StreamingEnabled)
 local FAR_RENDER_RADIUS = 2048
 local FAR_RENDER_MIN_RADIUS = 512
+
+-- Theme colors
+local COLOR_BG_TOP = Color3.fromRGB(38, 38, 48)
+local COLOR_BG_BOTTOM = Color3.fromRGB(16, 16, 21)
+local COLOR_ACCENT = Color3.fromRGB(90, 140, 255)
+local COLOR_ON = Color3.fromRGB(45, 200, 115)
+local COLOR_OFF = Color3.fromRGB(50, 50, 62)
+
+local MAIN_SIZE = UDim2.new(0, 330, 0, 260)
+local MAIN_SIZE_SMALL = UDim2.new(0, 291, 0, 221) -- 88% for open/close tween
 
 --==================================================
 -- GUI
@@ -41,13 +53,14 @@ ScreenGui.Parent = PlayerGui
 
 local Welcome = Instance.new("TextLabel")
 Welcome.Name = "WelcomeMessage"
-Welcome.Size = UDim2.fromOffset(360, 70)
 Welcome.AnchorPoint = Vector2.new(0.5, 0.5)
 Welcome.Position = UDim2.fromScale(0.5, 0.5)
+Welcome.Size = UDim2.fromOffset(0, 0)
 Welcome.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 Welcome.BackgroundTransparency = 0.2
 Welcome.BorderSizePixel = 0
 Welcome.Text = "Welcome, " .. Player.DisplayName
+Welcome.TextTransparency = 1
 Welcome.TextSize = 26
 Welcome.Font = Enum.Font.GothamBold
 Welcome.TextXAlignment = Enum.TextXAlignment.Center
@@ -59,41 +72,77 @@ local WelcomeCorner = Instance.new("UICorner")
 WelcomeCorner.CornerRadius = UDim.new(0, 14)
 WelcomeCorner.Parent = Welcome
 
+local WelcomeStroke = Instance.new("UIStroke")
+WelcomeStroke.Thickness = 1
+WelcomeStroke.Color = COLOR_ACCENT
+WelcomeStroke.Transparency = 0.5
+WelcomeStroke.Parent = Welcome
+
+-- Pop-in entrance animation
+TweenService:Create(Welcome, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+	Size = UDim2.fromOffset(360, 70),
+	TextTransparency = 0
+}):Play()
+
 -- Rainbow text animation
 local welcomeRainbowRunning = true
 
 task.spawn(function()
-    local hue = 0
-    while welcomeRainbowRunning and Welcome.Parent do
-        hue = (hue + 0.008) % 1
-        Welcome.TextColor3 = Color3.fromHSV(hue, 1, 1)
-        task.wait(0.03)
-    end
+	local hue = 0
+	while welcomeRainbowRunning and Welcome.Parent do
+		hue = (hue + 0.008) % 1
+		Welcome.TextColor3 = Color3.fromHSV(hue, 1, 1)
+		task.wait(0.03)
+	end
 end)
 
--- Keep welcome visible for 5 seconds
- task.delay(5, function()
-    welcomeRainbowRunning = false
-    if Welcome and Welcome.Parent then
-        Welcome:Destroy()
-    end
+-- Fade out and remove after a few seconds
+task.delay(4, function()
+	welcomeRainbowRunning = false
+	if Welcome and Welcome.Parent then
+		local fadeTween = TweenService:Create(Welcome, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Size = UDim2.fromOffset(0, 0),
+			TextTransparency = 1
+		})
+		fadeTween:Play()
+		fadeTween.Completed:Connect(function()
+			Welcome:Destroy()
+		end)
+	end
 end)
 
 --==================================================
--- MAIN FRAME
+-- MAIN FRAME (CanvasGroup so the whole panel can fade as one)
 --==================================================
 
-local MainFrame = Instance.new("Frame")
+local MainFrame = Instance.new("CanvasGroup")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 330, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -165, 0.5, -130)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Size = MAIN_SIZE_SMALL
+MainFrame.GroupTransparency = 1
+MainFrame.BackgroundColor3 = COLOR_BG_BOTTOM
 MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.CornerRadius = UDim.new(0, 16)
 MainCorner.Parent = MainFrame
+
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, COLOR_BG_TOP),
+	ColorSequenceKeypoint.new(1, COLOR_BG_BOTTOM),
+})
+MainGradient.Rotation = 90
+MainGradient.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1.2
+MainStroke.Color = COLOR_ACCENT
+MainStroke.Transparency = 0.55
+MainStroke.Parent = MainFrame
 
 --==================================================
 -- TOP BAR
@@ -102,14 +151,33 @@ MainCorner.Parent = MainFrame
 local TopBar = Instance.new("Frame")
 TopBar.Name = "TopBar"
 TopBar.Size = UDim2.new(1, 0, 0, 65)
-TopBar.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
-TopBar.BackgroundTransparency = 0.35
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+TopBar.BackgroundTransparency = 0.15
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 
 local TopCorner = Instance.new("UICorner")
-TopCorner.CornerRadius = UDim.new(0, 14)
+TopCorner.CornerRadius = UDim.new(0, 16)
 TopCorner.Parent = TopBar
+
+local TopGradient = Instance.new("UIGradient")
+TopGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 55, 70)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 26, 33)),
+})
+TopGradient.Rotation = 90
+TopGradient.Parent = TopBar
+
+-- Square off the bottom corners of the rounded top bar
+local TopBarFix = Instance.new("Frame")
+TopBarFix.Name = "CornerFix"
+TopBarFix.Size = UDim2.new(1, 0, 0, 16)
+TopBarFix.Position = UDim2.new(0, 0, 1, -16)
+TopBarFix.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+TopBarFix.BackgroundTransparency = 0.15
+TopBarFix.BorderSizePixel = 0
+TopBarFix.ZIndex = TopBar.ZIndex
+TopBarFix.Parent = TopBar
 
 --==================================================
 -- LOGO
@@ -121,6 +189,7 @@ Logo.Size = UDim2.new(0, 45, 0, 45)
 Logo.Position = UDim2.new(0, 10, 0.5, -22)
 Logo.BackgroundTransparency = 1
 Logo.Image = LOGO_ID
+Logo.ZIndex = 2
 Logo.Parent = TopBar
 
 local LogoCorner = Instance.new("UICorner")
@@ -141,6 +210,7 @@ Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 2
 Title.Parent = TopBar
 
 local Subtitle = Instance.new("TextLabel")
@@ -153,13 +223,12 @@ Subtitle.TextColor3 = Color3.fromRGB(160, 160, 160)
 Subtitle.TextSize = 12
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.ZIndex = 2
 Subtitle.Parent = TopBar
 
 --==================================================
 -- SMOOTH DRAG MAIN FRAME
 --==================================================
-
-local UserInputService = game:GetService("UserInputService")
 
 local draggingMain = false
 local dragStartMain
@@ -238,25 +307,45 @@ PageTitle.TextXAlignment = Enum.TextXAlignment.Left
 PageTitle.Parent = MainFrame
 
 --==================================================
--- BOOSTER BUTTON
+-- BOOSTER BUTTON (with status dot + animated stroke)
 --==================================================
 
 local BoosterButton = Instance.new("TextButton")
 BoosterButton.Name = "BoosterButton"
 BoosterButton.Size = UDim2.new(1, -30, 0, 55)
 BoosterButton.Position = UDim2.new(0, 15, 0, 120)
-BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+BoosterButton.BackgroundColor3 = COLOR_OFF
 BoosterButton.BackgroundTransparency = 0.45
 BoosterButton.BorderSizePixel = 0
-BoosterButton.Text = "FPS BOOSTER : OFF"
+BoosterButton.Text = "  FPS BOOSTER : OFF"
 BoosterButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BoosterButton.TextSize = 16
 BoosterButton.Font = Enum.Font.GothamBold
+BoosterButton.AutoButtonColor = false
 BoosterButton.Parent = MainFrame
 
 local BoosterCorner = Instance.new("UICorner")
 BoosterCorner.CornerRadius = UDim.new(0, 10)
 BoosterCorner.Parent = BoosterButton
+
+local BoosterStroke = Instance.new("UIStroke")
+BoosterStroke.Thickness = 1.2
+BoosterStroke.Color = COLOR_OFF
+BoosterStroke.Transparency = 0.5
+BoosterStroke.Parent = BoosterButton
+
+local BoosterDot = Instance.new("Frame")
+BoosterDot.Name = "StatusDot"
+BoosterDot.AnchorPoint = Vector2.new(0.5, 0.5)
+BoosterDot.Size = UDim2.fromOffset(10, 10)
+BoosterDot.Position = UDim2.new(1, -18, 0.5, 0)
+BoosterDot.BackgroundColor3 = COLOR_OFF
+BoosterDot.BorderSizePixel = 0
+BoosterDot.Parent = BoosterButton
+
+local BoosterDotCorner = Instance.new("UICorner")
+BoosterDotCorner.CornerRadius = UDim.new(1, 0)
+BoosterDotCorner.Parent = BoosterDot
 
 --==================================================
 -- RESTORE BUTTON
@@ -266,18 +355,63 @@ local RestoreButton = Instance.new("TextButton")
 RestoreButton.Name = "RestoreButton"
 RestoreButton.Size = UDim2.new(1, -30, 0, 45)
 RestoreButton.Position = UDim2.new(0, 15, 0, 185)
-RestoreButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+RestoreButton.BackgroundColor3 = COLOR_OFF
 RestoreButton.BackgroundTransparency = 0.45
 RestoreButton.BorderSizePixel = 0
 RestoreButton.Text = "RESTORE ORIGINAL"
 RestoreButton.TextColor3 = Color3.fromRGB(220, 220, 220)
 RestoreButton.TextSize = 14
 RestoreButton.Font = Enum.Font.GothamBold
+RestoreButton.AutoButtonColor = false
 RestoreButton.Parent = MainFrame
 
 local RestoreCorner = Instance.new("UICorner")
 RestoreCorner.CornerRadius = UDim.new(0, 10)
 RestoreCorner.Parent = RestoreButton
+
+local RestoreStroke = Instance.new("UIStroke")
+RestoreStroke.Thickness = 1
+RestoreStroke.Color = Color3.fromRGB(255, 255, 255)
+RestoreStroke.Transparency = 0.85
+RestoreStroke.Parent = RestoreButton
+
+--==================================================
+-- SMALL HELPERS: BUTTON HOVER + PRESS ANIMATIONS
+--==================================================
+
+local function AttachHover(button, hoverTransparency, baseTransparency)
+	button.MouseEnter:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+			BackgroundTransparency = hoverTransparency
+		}):Play()
+	end)
+	button.MouseLeave:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+			BackgroundTransparency = baseTransparency
+		}):Play()
+	end)
+end
+
+local function ButtonPop(button)
+	local originalSize = button.Size
+	local shrunk = UDim2.new(
+		originalSize.X.Scale, originalSize.X.Offset - 6,
+		originalSize.Y.Scale, originalSize.Y.Offset - 4
+	)
+
+	TweenService:Create(button, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = shrunk
+	}):Play()
+
+	task.delay(0.07, function()
+		TweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = originalSize
+		}):Play()
+	end)
+end
+
+AttachHover(BoosterButton, 0.3, 0.45)
+AttachHover(RestoreButton, 0.3, 0.45)
 
 --==================================================
 -- ORIGINAL SETTINGS STORAGE
@@ -547,29 +681,83 @@ local function RestoreOriginal()
 end
 
 --==================================================
--- BOOSTER ON/OFF
+-- BOOSTER ON/OFF (animated stroke + status dot pulse)
 --==================================================
 
-BoosterButton.Activated:Connect(function()
+local boosterPulseId = 0
 
-	BoosterEnabled = not BoosterEnabled
+local function SetBoosterVisual(enabled)
 
-	if BoosterEnabled then
+	boosterPulseId += 1
+	local myPulseId = boosterPulseId
 
-		BoosterButton.Text = "FPS BOOSTER : ON"
-		BoosterButton.BackgroundColor3 = Color3.fromRGB(40, 170, 90)
-		BoosterButton.BackgroundTransparency = 0.45
+	if enabled then
 
-		ApplyBoost()
+		BoosterButton.Text = "  FPS BOOSTER : ON"
+
+		TweenService:Create(BoosterButton, TweenInfo.new(0.2), {
+			BackgroundColor3 = COLOR_ON,
+			BackgroundTransparency = 0.35
+		}):Play()
+
+		TweenService:Create(BoosterStroke, TweenInfo.new(0.2), {
+			Color = COLOR_ON,
+			Transparency = 0.1
+		}):Play()
+
+		TweenService:Create(BoosterDot, TweenInfo.new(0.2), {
+			BackgroundColor3 = COLOR_ON
+		}):Play()
+
+		-- Gentle glow pulse on the status dot while boost is active
+		task.spawn(function()
+			while myPulseId == boosterPulseId do
+				TweenService:Create(BoosterDot, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {
+					BackgroundTransparency = 0.6
+				}):Play()
+				task.wait(0.6)
+				if myPulseId ~= boosterPulseId then break end
+				TweenService:Create(BoosterDot, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {
+					BackgroundTransparency = 0
+				}):Play()
+				task.wait(0.6)
+			end
+		end)
 
 	else
 
-		BoosterButton.Text = "FPS BOOSTER : OFF"
-		BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-		BoosterButton.BackgroundTransparency = 0.45
+		BoosterButton.Text = "  FPS BOOSTER : OFF"
 
+		TweenService:Create(BoosterButton, TweenInfo.new(0.2), {
+			BackgroundColor3 = COLOR_OFF,
+			BackgroundTransparency = 0.45
+		}):Play()
+
+		TweenService:Create(BoosterStroke, TweenInfo.new(0.2), {
+			Color = COLOR_OFF,
+			Transparency = 0.5
+		}):Play()
+
+		TweenService:Create(BoosterDot, TweenInfo.new(0.2), {
+			BackgroundColor3 = COLOR_OFF,
+			BackgroundTransparency = 0
+		}):Play()
+
+	end
+
+end
+
+BoosterButton.Activated:Connect(function()
+
+	ButtonPop(BoosterButton)
+
+	BoosterEnabled = not BoosterEnabled
+	SetBoosterVisual(BoosterEnabled)
+
+	if BoosterEnabled then
+		ApplyBoost()
+	else
 		RestoreOriginal()
-
 	end
 
 end)
@@ -580,11 +768,10 @@ end)
 
 RestoreButton.Activated:Connect(function()
 
-	BoosterEnabled = false
+	ButtonPop(RestoreButton)
 
-	BoosterButton.Text = "FPS BOOSTER : OFF"
-	BoosterButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-	BoosterButton.BackgroundTransparency = 0.45
+	BoosterEnabled = false
+	SetBoosterVisual(false)
 
 	RestoreOriginal()
 
@@ -651,20 +838,13 @@ FloatingButton.Position = UDim2.new(0.5, -29, 0.5, -29)
 
 -- Button itself is transparent, only the image is visible
 FloatingButton.BackgroundTransparency = 1
-FloatingButton.Image = "rbxassetid://127978764819014"
+FloatingButton.Image = BUTTON_LOGO_ID
 FloatingButton.AutoButtonColor = false
 FloatingButton.ZIndex = 1000
 FloatingButton.Parent = ScreenGui
 
 --==================================================
--- FIX MAIN FRAME TRANSPARENCY
---==================================================
-
-MainFrame.BackgroundTransparency = 0.45
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-
---==================================================
--- SMOOTH DRAG SYSTEM
+-- SMOOTH DRAG SYSTEM (floating button)
 --==================================================
 
 local dragging = false
@@ -709,7 +889,7 @@ FloatingButton.InputChanged:Connect(function(input)
 
 end)
 
-game:GetService("UserInputService").InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
 
 	if input == dragInput and dragging then
 		updateDrag(input)
@@ -732,8 +912,6 @@ end)
 -- ROTATION
 --==================================================
 
-local rotationSpeed = 90
-
 RunService.RenderStepped:Connect(function(deltaTime)
 
 	FloatingButton.Rotation =
@@ -742,12 +920,60 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 --==================================================
--- OPEN / CLOSE
+-- OPEN / CLOSE (animated: scale + fade via CanvasGroup)
 --==================================================
+
+local menuOpen = false
+local menuTweening = false
+
+local function OpenMenu()
+
+	if menuOpen or menuTweening then return end
+	menuTweening = true
+	menuOpen = true
+
+	MainFrame.Size = MAIN_SIZE_SMALL
+	MainFrame.GroupTransparency = 1
+	MainFrame.Visible = true
+
+	local tween = TweenService:Create(MainFrame, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = MAIN_SIZE,
+		GroupTransparency = 0
+	})
+
+	tween:Play()
+	tween.Completed:Connect(function()
+		menuTweening = false
+	end)
+
+end
+
+local function CloseMenu()
+
+	if not menuOpen or menuTweening then return end
+	menuTweening = true
+	menuOpen = false
+
+	local tween = TweenService:Create(MainFrame, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Size = MAIN_SIZE_SMALL,
+		GroupTransparency = 1
+	})
+
+	tween:Play()
+	tween.Completed:Connect(function()
+		MainFrame.Visible = false
+		menuTweening = false
+	end)
+
+end
 
 FloatingButton.Activated:Connect(function()
 
-	MainFrame.Visible = not MainFrame.Visible
+	if menuOpen then
+		CloseMenu()
+	else
+		OpenMenu()
+	end
 
 end)
 
